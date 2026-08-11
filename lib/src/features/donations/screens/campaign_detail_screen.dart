@@ -160,7 +160,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
 
   Widget _buildSliverAppBar(Campaign campaign) {
     final hasImage = campaign.image != null && campaign.image!.isNotEmpty;
-    final baseUrl = 'http://10.207.104.29:3000';
+    final baseUrl = 'http://10.159.177.29:3000';
 
     return SliverAppBar(
       expandedHeight: MediaQuery.of(context).size.height * 0.35,
