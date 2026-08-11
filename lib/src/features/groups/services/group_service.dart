@@ -50,6 +50,18 @@ class GroupService {
     });
     return GroupMessage.fromJson(response.data['data']);
   }
+
+  Future<GroupMessage> reactToMessage(
+    String groupId,
+    String messageId,
+    String emoji,
+  ) async {
+    final response = await _api.post(
+      '/groups/$groupId/messages/$messageId/reactions',
+      data: {'emoji': emoji},
+    );
+    return GroupMessage.fromJson(response.data['data']);
+  }
 }
 
 class GroupMessagesResult {

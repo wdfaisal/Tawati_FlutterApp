@@ -46,6 +46,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final socketService = ref.read(socketServiceProvider);
     socketService.offEvent('message:new');
     socketService.offEvent('message:deleted');
+    socketService.offEvent('message:reaction');
     socketService.leaveGroup(widget.groupId);
     _inputController.dispose();
     _scrollController.dispose();
@@ -56,6 +57,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final socketService = ref.read(socketServiceProvider);
     socketService.offEvent('message:new');
     socketService.offEvent('message:deleted');
+    socketService.offEvent('message:reaction');
 
     await socketService.connect();
 
@@ -89,6 +91,18 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
       if (!mounted) return;
       setState(() {
         _messages.removeWhere((m) => m.id == messageId);
+      });
+    });
+
+    socketService.onMessageReaction((data) {
+      final message = GroupMessage.fromSocketJson(data);
+      if (message.groupId != widget.groupId) return;
+      if (!mounted) return;
+      setState(() {
+        final existingIndex = _messages.indexWhere((m) => m.id == message.id);
+        if (existingIndex >= 0) {
+          _messages[existingIndex] = message;
+        }
       });
     });
 
@@ -221,6 +235,158 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
 
   void _retryFailedMessage(GroupMessage message) {
     _scheduleRetry(message, message.content);
+  }
+
+  static const _reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+  List<MessageReaction> _computeReactions(
+    List<MessageReaction> current,
+    String? userId,
+    String emoji,
+  ) {
+    if (userId == null || userId.isEmpty) return current;
+    final hasSame = current.any(
+      (r) => r.userId == userId && r.emoji == emoji,
+    );
+    final list = current.where((r) => r.userId != userId).toList();
+    if (!hasSame) {
+      list.add(MessageReaction(userId: userId, emoji: emoji));
+    }
+    return list;
+  }
+
+  Future<void> _toggleReaction(GroupMessage message, String emoji) async {
+    if (_viewOnly) return;
+    final previous = message;
+    final optimistic = message.copyWith(
+      reactions: _computeReactions(
+        message.reactions,
+        _currentUserId,
+        emoji,
+      ),
+    );
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.id == message.id);
+      if (idx >= 0) _messages[idx] = optimistic;
+    });
+    try {
+      final server = await ref
+          .read(groupServiceProvider)
+          .reactToMessage(widget.groupId, message.id, emoji);
+      if (!mounted) return;
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == message.id);
+        if (idx >= 0) {
+          _messages[idx] = server.copyWith(sendStatus: 'sent');
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == message.id);
+        if (idx >= 0) _messages[idx] = previous;
+      });
+    }
+  }
+
+  Future<void> _showReactionPicker(GroupMessage message) async {
+    if (_viewOnly) return;
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'اختر رد فعل',
+                style: TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: _reactionEmojis.map((e) {
+                  final reacted = message.reactions.any(
+                    (r) => r.userId == _currentUserId && r.emoji == e,
+                  );
+                  return GestureDetector(
+                    onTap: () => Navigator.of(context).pop(e),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: reacted
+                            ? AppColors.primaryLight
+                            : Colors.transparent,
+                      ),
+                      child: Text(e, style: const TextStyle(fontSize: 28)),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked != null) await _toggleReaction(message, picked);
+  }
+
+  Widget _buildReactionsRow(GroupMessage message) {
+    if (message.reactions.isEmpty) return const SizedBox.shrink();
+    final counts = <String, int>{};
+    for (final r in message.reactions) {
+      counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        children: counts.entries.map((entry) {
+          final reacted = message.reactions.any(
+            (r) => r.userId == _currentUserId && r.emoji == entry.key,
+          );
+          return InkWell(
+            onTap: () => _toggleReaction(message, entry.key),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: reacted
+                    ? AppColors.primaryLight
+                    : const Color(0xFFEDEFF3),
+                borderRadius: BorderRadius.circular(12),
+                border: reacted
+                    ? Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.4),
+                      )
+                    : null,
+              ),
+              child: Text(
+                '${entry.key} ${entry.value}',
+                style: const TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 
   String _formatDate(DateTime date) {
@@ -404,62 +570,66 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   ),
                 ),
               ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isMine ? AppColors.primaryLight : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isMine ? 4 : 16),
-                  bottomRight: Radius.circular(isMine ? 16 : 4),
+            GestureDetector(
+              onLongPress: () => _showReactionPicker(message),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isMine ? AppColors.primaryLight : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(16),
+                    topRight: const Radius.circular(16),
+                    bottomLeft: Radius.circular(isMine ? 4 : 16),
+                    bottomRight: Radius.circular(isMine ? 16 : 4),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message.content,
+                      style: const TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          timeStr,
+                          style: const TextStyle(
+                            fontFamily: 'IBMPlexSansArabic',
+                            fontSize: 10,
+                            color: AppColors.textHint,
+                          ),
+                        ),
+                        if (isMine) ...[
+                          const SizedBox(width: 4),
+                          if (message.sendStatus == 'pending')
+                            const SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.textHint),
+                            )
+                          else if (isFailed)
+                            InkWell(
+                              onTap: () => _retryFailedMessage(message),
+                              child: const Icon(Icons.error_outline, size: 14, color: AppColors.error),
+                            )
+                          else
+                            const Icon(Icons.done, size: 14, color: AppColors.textHint),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    message.content,
-                    style: const TextStyle(
-                      fontFamily: 'IBMPlexSansArabic',
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        timeStr,
-                        style: const TextStyle(
-                          fontFamily: 'IBMPlexSansArabic',
-                          fontSize: 10,
-                          color: AppColors.textHint,
-                        ),
-                      ),
-                      if (isMine) ...[
-                        const SizedBox(width: 4),
-                        if (message.sendStatus == 'pending')
-                          const SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.textHint),
-                          )
-                        else if (isFailed)
-                          InkWell(
-                            onTap: () => _retryFailedMessage(message),
-                            child: const Icon(Icons.error_outline, size: 14, color: AppColors.error),
-                          )
-                        else
-                          const Icon(Icons.done, size: 14, color: AppColors.textHint),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
             ),
+            _buildReactionsRow(message),
           ],
         ),
       ),

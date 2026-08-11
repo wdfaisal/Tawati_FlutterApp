@@ -59,6 +59,10 @@ class SocketService {
     _socket?.on('message:deleted', (data) => handler(data?.toString() ?? ''));
   }
 
+  void onMessageReaction(dynamic Function(Map<String, dynamic>) handler) {
+    _socket?.on('message:reaction', (data) => handler(_toMap(data)));
+  }
+
   void onCampaignUpdate(dynamic Function(Map<String, dynamic>) handler) {
     _socket?.on('campaign:update', (data) => handler(_toMap(data)));
   }

@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:ui' show ImageFilter;
+
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
@@ -86,23 +87,123 @@ class CardScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           child: Column(
             children: [
-              _DigitalCard(
+            GestureDetector(
+              onTap: () => _showFullscreenCard(
+                context,
                 fullName: user.fullNameAr,
-                userId: user.id,
                 memberNumber: user.memberNumber ?? '—',
                 joinedAt: joinedAtStr,
               ),
-              const SizedBox(height: 24),
-              _buildDetailsSection(
-                fullName: user.fullNameAr,
-                dob: user.dateOfBirth,
+              child: Hero(
+                tag: 'digital-card',
+                child: _DigitalCard(
+                  fullName: user.fullNameAr,
+                  memberNumber: user.memberNumber ?? '—',
+                  joinedAt: joinedAtStr,
+                ),
               ),
-              const SizedBox(height: 24),
-              _buildActions(user, context),
+            ),
+            const SizedBox(height: 10),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.zoom_out_map, size: 15, color: AppColors.textHint),
+                SizedBox(width: 6),
+                Text(
+                  'اضغط على البطاقة لتكبيرها',
+                  style: TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _buildDetailsSection(
+              fullName: user.fullNameAr,
+              dob: user.dateOfBirth,
+            ),
+            const SizedBox(height: 24),
+            _buildActions(user, context),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  void _showFullscreenCard(
+    BuildContext context, {
+    required String fullName,
+    required String memberNumber,
+    required String joinedAt,
+  }) {
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'إغلاق',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(color: Colors.black.withValues(alpha: 0.45)),
+                ),
+              ),
+              SafeArea(
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: IconButton.filled(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.black.withValues(
+                              alpha: 0.35,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: FractionallySizedBox(
+                          widthFactor: 0.9,
+                          child: Hero(
+                            tag: 'digital-card',
+                            child: _DigitalCard(
+                              fullName: fullName,
+                              memberNumber: memberNumber,
+                              joinedAt: joinedAt,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
     );
   }
 
@@ -296,13 +397,11 @@ class _DetailGridRow extends StatelessWidget {
 
 class _DigitalCard extends StatelessWidget {
   final String fullName;
-  final String userId;
   final String memberNumber;
   final String joinedAt;
 
   const _DigitalCard({
     required this.fullName,
-    required this.userId,
     required this.memberNumber,
     required this.joinedAt,
   });
@@ -455,25 +554,19 @@ class _DigitalCard extends StatelessWidget {
                           ),
                           const Spacer(),
                           Container(
-                            width: 90,
-                            height: 90,
-                            padding: const EdgeInsets.all(8),
+                            width: 74,
+                            height: 74,
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.white.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
                             ),
-                            child: QrImageView(
-                              data: userId,
-                              version: QrVersions.auto,
-                              size: 74,
-                              eyeStyle: const QrEyeStyle(
-                                eyeShape: QrEyeShape.square,
-                                color: AppColors.primaryDark,
-                              ),
-                              dataModuleStyle: const QrDataModuleStyle(
-                                dataModuleShape: QrDataModuleShape.square,
-                                color: AppColors.primaryDark,
-                              ),
+                            child: const Icon(
+                              Icons.verified_user,
+                              size: 38,
+                              color: Colors.white,
                             ),
                           ),
                         ],

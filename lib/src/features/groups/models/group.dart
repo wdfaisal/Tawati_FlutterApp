@@ -52,6 +52,19 @@
   );
 }
 
+class MessageReaction {
+  final String userId;
+  final String emoji;
+
+  MessageReaction({required this.userId, required this.emoji});
+
+  factory MessageReaction.fromJson(Map<String, dynamic> json) =>
+      MessageReaction(
+        userId: json['user_id']?.toString() ?? '',
+        emoji: json['emoji']?.toString() ?? '',
+      );
+}
+
 class GroupMessage {
   final String id;
   final String groupId;
@@ -62,6 +75,7 @@ class GroupMessage {
   final String type;
   final DateTime createdAt;
   final String sendStatus;
+  final List<MessageReaction> reactions;
 
   GroupMessage({
     required this.id,
@@ -73,9 +87,14 @@ class GroupMessage {
     required this.type,
     required this.createdAt,
     this.sendStatus = 'sent',
+    this.reactions = const [],
   });
 
-  GroupMessage copyWith({String? id, String? sendStatus}) => GroupMessage(
+  GroupMessage copyWith({
+    String? id,
+    String? sendStatus,
+    List<MessageReaction>? reactions,
+  }) => GroupMessage(
     id: id ?? this.id,
     groupId: groupId,
     senderId: senderId,
@@ -85,7 +104,19 @@ class GroupMessage {
     type: type,
     createdAt: createdAt,
     sendStatus: sendStatus ?? this.sendStatus,
+    reactions: reactions ?? this.reactions,
   );
+
+  static List<MessageReaction> _parseReactions(dynamic raw) {
+    final list = raw as List<dynamic>? ?? const [];
+    return list
+        .map((e) => MessageReaction.fromJson(
+              e is Map
+                  ? e.map((k, v) => MapEntry(k.toString(), v))
+                  : <String, dynamic>{},
+            ))
+        .toList();
+  }
 
   factory GroupMessage.fromJson(Map<String, dynamic> json) => GroupMessage(
     id: json['_id'] ?? json['id'] ?? '',
@@ -96,6 +127,7 @@ class GroupMessage {
     content: json['content'] ?? '',
     type: json['type'] ?? 'text',
     createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
+    reactions: _parseReactions(json['reactions']),
   );
 
   factory GroupMessage.fromSocketJson(Map<String, dynamic> json) {
@@ -121,6 +153,7 @@ class GroupMessage {
       content: json['content']?.toString() ?? '',
       type: json['content_type']?.toString() ?? json['type']?.toString() ?? 'text',
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      reactions: _parseReactions(json['reactions']),
     );
   }
 }

@@ -40,9 +40,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/Tawati-app-icon.jpg"
+  image_path: "assets/images/logo_2.png"
   adaptive_icon_background: "#0D9488"
-  adaptive_icon_foreground: "assets/images/Tawati-app-icon.jpg"
+  adaptive_icon_foreground: "assets/images/logo_2.png"
   remove_alpha_ios: true
 
 flutter:
