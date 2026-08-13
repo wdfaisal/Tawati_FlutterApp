@@ -181,7 +181,7 @@ class _InitiativeDetailScreenState extends ConsumerState<InitiativeDetailScreen>
 
   Widget _buildSliverAppBar(Initiative initiative) {
     final hasImage = initiative.image != null && initiative.image!.isNotEmpty;
-    final baseUrl = 'http://10.159.177.29:3000';
+    final baseUrl = 'http://10.131.43.29:3000';
 
     return SliverAppBar(
       expandedHeight: MediaQuery.of(context).size.height * 0.35,

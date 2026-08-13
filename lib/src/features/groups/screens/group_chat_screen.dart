@@ -413,15 +413,16 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         backgroundColor: AppColors.surface,
         appBar: AppBar(
           title: Text(widget.groupName),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.textPrimary,
           elevation: 0,
+          scrolledUnderElevation: 0,
           actions: [
             IconButton(
               tooltip: isMutedLocally ? 'تفعيل الإشعارات' : 'كتم الإشعارات',
               icon: Icon(
                 isMutedLocally ? Icons.notifications_off_outlined : Icons.notifications_none,
-                color: Colors.white,
+                color: AppColors.textPrimary,
               ),
               onPressed: () {
                 ref.read(localMutedGroupsProvider.notifier).toggle(widget.groupId);
@@ -431,7 +432,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               const Padding(
                 padding: EdgeInsets.only(left: 16),
                 child: Center(
-                  child: Icon(Icons.visibility_outlined, size: 20, color: Colors.white70),
+                  child: Icon(Icons.visibility_outlined, size: 20, color: AppColors.textSecondary),
                 ),
               ),
           ],

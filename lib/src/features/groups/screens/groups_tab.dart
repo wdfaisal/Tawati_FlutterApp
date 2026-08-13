@@ -18,7 +18,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
   List<Group> _allGroups = [];
   bool _loading = true;
   String? _error;
-  bool _joining = false;
+  final Set<String> _joiningGroupIds = <String>{};
 
   @override
   void initState() {
@@ -50,17 +50,24 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
   }
 
   Future<void> _joinGroup(Group group) async {
-    setState(() => _joining = true);
+    setState(() => _joiningGroupIds.add(group.id));
     try {
       await ref.read(groupServiceProvider).joinGroup(group.id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم الانضمام إلى ${group.name}', style: const TextStyle(fontFamily: 'IBMPlexSansArabic')),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
+      if (!mounted) return;
+      setState(() {
+        _allGroups = [
+          for (final g in _allGroups)
+            if (g.id == group.id)
+              g.copyWith(
+                isMember: true,
+                myPermission: 'send_and_view',
+                myMemberStatus: 'active',
+              )
+            else
+              g,
+        ];
+      });
+      _openChat(group.id, group.name);
       await _loadGroups();
     } catch (e) {
       if (mounted) {
@@ -72,8 +79,15 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
         );
       }
     } finally {
-      if (mounted) setState(() => _joining = false);
+      if (mounted) setState(() => _joiningGroupIds.remove(group.id));
     }
+  }
+
+  void _openChat(String groupId, String groupName) {
+    context.pushNamed('groupChat', extra: {
+      'groupId': groupId,
+      'groupName': groupName,
+    });
   }
 
   @override
@@ -84,9 +98,10 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
         backgroundColor: AppColors.surface,
         appBar: AppBar(
           title: const Text('القروبات'),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.textPrimary,
           elevation: 0,
+          scrolledUnderElevation: 0,
         ),
         body: _buildBody(),
       ),
@@ -287,7 +302,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
               if (joined)
                 const Icon(Icons.chevron_left, color: AppColors.textHint, size: 22)
               else
-                _joining
+                _joiningGroupIds.contains(group.id)
                     ? const SizedBox(
                         width: 20,
                         height: 20,

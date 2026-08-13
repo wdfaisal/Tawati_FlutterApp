@@ -34,16 +34,39 @@
   bool get isViewOnly => myPermission == 'view_only';
   bool get isMutedByAdmin => myMemberStatus == 'muted';
 
+  Group copyWith({
+    bool? isMember,
+    String? role,
+    int? unreadCount,
+    String? myPermission,
+    String? myMemberStatus,
+  }) => Group(
+    id: id,
+    name: name,
+    description: description,
+    image: image,
+    type: type,
+    createdByName: createdByName,
+    memberCount: memberCount,
+    messageCount: messageCount,
+    isMember: isMember ?? this.isMember,
+    role: role ?? this.role,
+    unreadCount: unreadCount ?? this.unreadCount,
+    myPermission: myPermission ?? this.myPermission,
+    myMemberStatus: myMemberStatus ?? this.myMemberStatus,
+    createdAt: createdAt,
+  );
+
   factory Group.fromJson(Map<String, dynamic> json) => Group(
     id: json['_id'] ?? json['id'] ?? '',
     name: json['name'] ?? '',
     description: json['description'],
-    image: json['image'],
+    image: json['image'] ?? json['avatar_image'],
     type: json['type'] ?? 'general',
     createdByName: json['created_by_name'],
-    memberCount: json['member_count'] ?? 0,
-    messageCount: json['message_count'] ?? 0,
-    isMember: json['is_member'] ?? false,
+    memberCount: json['member_count'] ?? json['memberCount'] ?? 0,
+    messageCount: json['message_count'] ?? json['messageCount'] ?? 0,
+    isMember: json['is_member'] ?? json['isMember'] ?? false,
     role: json['role'] ?? json['my_role'],
     unreadCount: json['unread_count'] ?? json['unreadCount'] ?? 0,
     myPermission: json['my_permission'],
