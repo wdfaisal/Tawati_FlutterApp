@@ -32,26 +32,35 @@ class _TawatiAppState extends ConsumerState<TawatiApp> {
   @override
   void initState() {
     super.initState();
-    ref.read(appConfigServiceProvider).fetchConfig().then((config) {
-      if (mounted) {
-        ref.read(appConfigProvider.notifier).state = config;
-        if (!kIsWeb) {
-          final pk = config['stripe_publishable_key'] as String?;
-          if (pk != null && pk.isNotEmpty) {
-            Stripe.publishableKey = pk;
-          }
-        }
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    Map<String, dynamic> config;
+    try {
+      config = await ref.read(appConfigServiceProvider).fetchConfig();
+    } catch (_) {
+      config = {};
+    }
+    if (!mounted) return;
+    ref.read(appConfigProvider.notifier).state = config;
+    if (!kIsWeb) {
+      final pk = config['stripe_publishable_key'] as String?;
+      if (pk != null && pk.isNotEmpty) {
+        Stripe.publishableKey = pk;
       }
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final config = ref.watch(appConfigProvider);
     final primaryHex = config['primary_color'] as String?;
-    final seedColor = primaryHex != null
-        ? Color(int.parse(primaryHex.replaceFirst('#', '0xFF')))
-        : null;
+    Color? seedColor;
+    if (primaryHex != null && primaryHex.isNotEmpty) {
+      final value = int.tryParse('0xFF${primaryHex.replaceFirst('#', '')}');
+      if (value != null) seedColor = Color(value);
+    }
 
     return MaterialApp.router(
       title: config['app_name'] as String? ?? 'تواتي',
