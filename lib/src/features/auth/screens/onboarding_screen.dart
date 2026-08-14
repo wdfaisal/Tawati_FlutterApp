@@ -186,15 +186,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildCard(BuildContext context, _OnboardingPageData page) {
     final isLast = _currentPage == _pages.length - 1;
-    return Container(
-      key: ValueKey('card_$_currentPage'),
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: -48),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(48)),
-        boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, -4))],
-      ),
+    return Transform.translate(
+      offset: const Offset(0, -48),
+      child: Container(
+        key: ValueKey('card_$_currentPage'),
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(48)),
+          boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, -4))],
+        ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -325,6 +326,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 }
