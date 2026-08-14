@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:tawati_mobile/src/core/theme/app_theme.dart';
+
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -55,40 +57,54 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Scaffold(
         body: Stack(
           children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 500),
-              switchInCurve: Curves.easeInOut,
-              switchOutCurve: Curves.easeInOut,
-              transitionBuilder: (child, animation) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              child: Stack(
-                key: ValueKey('bg_$_currentPage'),
-                children: [
-                  Positioned.fill(
-                    child: Image.asset(
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: MediaQuery.of(context).size.height / 2 + 20,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 600),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.05),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Stack(
+                  key: ValueKey('bg_$_currentPage'),
+                  fit: StackFit.expand,
+                  children: [
+                    const ColoredBox(color: AppColors.primary),
+                    Image.asset(
                       page.image,
                       fit: BoxFit.cover,
+                      alignment: Alignment.bottomCenter,
                       errorBuilder: (_, __, ___) =>
-                          Container(color: const Color(0xFF0D9488)),
+                          Container(color: AppColors.primary),
                     ),
-                  ),
-                  Positioned.fill(
-                    child: Container(
+                    Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withOpacity(0.3),
-                            Colors.black.withOpacity(0.1),
-                            Colors.black.withOpacity(0.4),
+                            Colors.black.withValues(alpha: 0.3),
+                            Colors.black.withValues(alpha: 0.05),
+                            Colors.black.withValues(alpha: 0.35),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             AnimatedSwitcher(
@@ -101,15 +117,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Align(
               alignment: Alignment.bottomCenter,
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 400),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
+                duration: const Duration(milliseconds: 450),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
                 transitionBuilder: (child, animation) {
                   return FadeTransition(
                     opacity: animation,
                     child: SlideTransition(
                       position: Tween<Offset>(
-                        begin: const Offset(0, 0.1),
+                        begin: const Offset(0, 0.08),
                         end: Offset.zero,
                       ).animate(animation),
                       child: child,
@@ -158,22 +174,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const Spacer(),
           Material(
-            color: Colors.white,
-            elevation: 2,
-            shadowColor: Colors.black.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(999),
+            color: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+              side: BorderSide(
+                color: AppColors.primary,
+                width: 1.5,
+              ),
+            ),
             child: InkWell(
               borderRadius: BorderRadius.circular(999),
               onTap: () => context.goNamed('login'),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
                 child: Text(
                   'تخطي',
                   style: TextStyle(
                     fontFamily: 'IBMPlexSansArabic',
                     fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF1F2937),
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -186,8 +206,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildCard(BuildContext context, _OnboardingPageData page) {
     final isLast = _currentPage == _pages.length - 1;
-    return Transform.translate(
-      offset: const Offset(0, -48),
+    return FractionallySizedBox(
+      heightFactor: 0.5,
       child: Container(
         key: ValueKey('card_$_currentPage'),
         width: double.infinity,
@@ -196,137 +216,139 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(48)),
           boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, -4))],
         ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            top: -48,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 12, offset: Offset(0, 4))],
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: -40,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 12, offset: Offset(0, 4))],
+                  ),
+                  child: Icon(page.icon, size: 40, color: AppColors.primary),
                 ),
-                child: Icon(page.icon, size: 48, color: const Color(0xFF445B4C)),
               ),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.only(
-              left: 24,
-              right: 24,
-              top: 72,
-              bottom: MediaQuery.of(context).padding.bottom + 20,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 56, 24, 120),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(width: 100, height: 1, color: const Color(0xFFE5E7EB)),
-                    const SizedBox(width: 14),
-                    const Icon(Icons.eco, size: 20, color: Color(0xFF445B4C)),
-                    const SizedBox(width: 14),
-                    Container(width: 100, height: 1, color: const Color(0xFFE5E7EB)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  page.title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'IBMPlexSansArabic',
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF354F3F),
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    page.subtitle,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'IBMPlexSansArabic',
-                      fontSize: 16,
-                      color: Color(0xFF6B7280),
-                      height: 1.7,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(width: 100, height: 1, color: const Color(0xFFE5E7EB)),
+                        const SizedBox(width: 14),
+                        const Icon(Icons.eco, size: 20, color: AppColors.primary),
+                        const SizedBox(width: 14),
+                        Container(width: 100, height: 1, color: const Color(0xFFE5E7EB)),
+                      ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(_pages.length, (i) {
-                    final isActive = i == _currentPage;
-                    return GestureDetector(
-                      onTap: () => setState(() => _currentPage = i),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: isActive ? 24 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: isActive ? const Color(0xFF5B7362) : const Color(0xFFD1D5DB),
-                          borderRadius: BorderRadius.circular(4),
+                    const SizedBox(height: 12),
+                    Text(
+                      page.title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        page.subtitle,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'IBMPlexSansArabic',
+                          fontSize: 14,
+                          color: Color(0xFF6B7280),
+                          height: 1.7,
                         ),
                       ),
-                    );
-                  }),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(_pages.length, (i) {
+                        final isActive = i == _currentPage;
+                        return GestureDetector(
+                          onTap: () => setState(() => _currentPage = i),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: isActive ? 24 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isActive ? AppColors.primary : const Color(0xFFD1D5DB),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
                 ),
-                SizedBox(
-                  height: 130,
-                  width: double.infinity,
-                  child: Stack(
-                    alignment: Alignment.bottomCenter,
-                    children: [
-                      Positioned.fill(
-                        child: const CustomPaint(painter: _CitySilhouettePainter()),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 12, 8, 10),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _onNext,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF5B7362),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                              elevation: 2,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  isLast ? 'ابدأ' : 'التالي',
-                                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.w600),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.arrow_back, size: 20),
-                              ],
-                            ),
+              ),
+            ),
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: MediaQuery.of(context).padding.bottom + 12,
+              child: SizedBox(
+                height: 104,
+                width: double.infinity,
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    Positioned.fill(
+                      child: const CustomPaint(painter: _CitySilhouettePainter()),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _onNext,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            elevation: 2,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                isLast ? 'ابدأ' : 'التالي',
+                                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 18, fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_back, size: 20),
+                            ],
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -350,7 +372,7 @@ class _CitySilhouettePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0x260D9488);
+    final paint = Paint()..color = const Color(0x26044465);
     final sx = size.width / 400;
     final sy = size.height / 100;
     final path = Path()
