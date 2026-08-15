@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:tawati_mobile/src/core/theme/app_theme.dart';
+const _kBgDark = Color(0xFF0F172A); // slate-900
+const _kOrange = Color(0xFFF97316); // orange-500
+const _kSlate700 = Color(0xFF334155);
+const _kSlate400 = Color(0xFF94A3B8);
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -15,27 +18,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _pages = [
     _OnboardingPageData(
-      image: 'assets/images/Splash_Screen_Image_1.jpg',
-      icon: Icons.badge,
-      title: 'تواتي... امتداد لجذورك',
-      subtitle: 'بطاقتك الرقمية التي تربطك بشجرة عائلتك ومجتمع توتي، أينما كنت.',
+      image: 'assets/images/Splash_Screen_Image_4.png',
+      line1: 'منصة تواتي للخدمة',
+      line2: 'المجتمعية',
+      subtitle: 'ساهم في تنمية مجتمعك وكن جزءاً من مبادرات توتي الهادفة التي تجمعنا جميعاً كن جزء من "توتي عالم جميل" .',
     ),
     _OnboardingPageData(
-      image: 'assets/images/Splash_Screen_Image_2.jpg',
-      icon: Icons.volunteer_activism,
-      title: 'ساهم في الخير',
-      subtitle: 'اكتشف مبادرات التكافل وساهم بترك أثر حقيقي في حياة الآخرين.',
+      image: 'assets/images/onboarding_bg_2.png',
+      line1: 'هوية تواتي ',
+      line2: 'الرقمية',
+      subtitle: ' لأننا نعتز بهويتنا التواتيه وثقناها رقميا . وثق بياناتك واحصل على هوية تواتي الرقمية .',
     ),
     _OnboardingPageData(
-      image: 'assets/images/Splash_Screen_Image_3.jpg',
-      icon: Icons.groups,
-      title: 'كل خبر، كل مبادرة، في مكان واحد',
-      subtitle: 'تابع أخبار أهلك ومناسباتهم، وشارك في المبادرات التي تصنع فرقًا في مجتمعك.',
+      image: 'assets/images/onboarding_bg_3.png',
+      line1: 'تواصل أسري',
+      line2: 'مترابط',
+      subtitle: 'ابقَ على اتصال دائم مع عائلتك وشاركهم اللحظات والخدمات في بيئة رقمية آمنة وخاصة.',
     ),
   ];
 
+  bool get _isLast => _currentPage == _pages.length - 1;
+
   void _onNext() {
-    if (_currentPage < _pages.length - 1) {
+    if (!_isLast) {
       setState(() => _currentPage++);
     } else {
       context.goNamed('login');
@@ -55,298 +60,228 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        body: Stack(
-          children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: MediaQuery.of(context).size.height / 2 + 20,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 600),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.05),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  );
-                },
-                child: Stack(
-                  key: ValueKey('bg_$_currentPage'),
-                  fit: StackFit.expand,
-                  children: [
-                    const ColoredBox(color: AppColors.primary),
-                    Image.asset(
-                      page.image,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.bottomCenter,
-                      errorBuilder: (_, __, ___) =>
-                          Container(color: AppColors.primary),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.3),
-                            Colors.black.withValues(alpha: 0.05),
-                            Colors.black.withValues(alpha: 0.35),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+        backgroundColor: _kBgDark,
+        body: GestureDetector(
+          onHorizontalDragEnd: (details) {
+            if (details.primaryVelocity != null) {
+              if (details.primaryVelocity! < 0) {
+                _onNext();
+              } else if (details.primaryVelocity! > 0) {
+                _onPrevious();
+              }
+            }
+          },
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 500),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.04, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
                 ),
-              ),
-            ),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              transitionBuilder: (child, animation) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              child: _buildHeader(context),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 450),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.08),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  );
-                },
-                child: _buildCard(context, page),
-              ),
-            ),
-            Positioned.fill(
-              child: GestureDetector(
-                onHorizontalDragEnd: (details) {
-                  if (details.primaryVelocity != null) {
-                    if (details.primaryVelocity! < 0) {
-                      _onNext();
-                    } else if (details.primaryVelocity! > 0) {
-                      _onPrevious();
-                    }
-                  }
-                },
-              ),
-            ),
-          ],
+              );
+            },
+            child: _buildPage(context, page),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildPage(BuildContext context, _OnboardingPageData page) {
+    return Stack(
+      key: ValueKey('page_$_currentPage'),
+      fit: StackFit.expand,
+      children: [
+        Image.asset(
+          page.image,
+          fit: BoxFit.cover,
+          opacity: const AlwaysStoppedAnimation(0.8),
+          errorBuilder: (_, _, _) => const ColoredBox(color: _kBgDark),
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0x000F172A),
+                Color(0xE60F172A),
+                _kBgDark,
+              ],
+              stops: [0.0, 0.7, 1.0],
+            ),
+          ),
+        ),
+        SafeArea(
+          child: Column(
+            children: [
+              _buildTopNav(context),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: IntrinsicHeight(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(40, 0, 40, 48),
+                                child: _buildContent(context, page),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTopNav(BuildContext context) {
     return Padding(
-      key: const ValueKey('header_new'),
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 16,
-        left: 16,
-        right: 16,
-      ),
+      padding: const EdgeInsets.all(32),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Image.asset(
             'assets/images/splash_logo.png',
-            height: 44,
+            height: 56,
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) =>
-                const Icon(Icons.diamond, color: Colors.white, size: 44),
+            errorBuilder: (_, _, _) => const SizedBox(width: 56, height: 56),
           ),
           const Spacer(),
-          Material(
-            color: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(999),
-              side: BorderSide(
-                color: AppColors.primary,
-                width: 1.5,
+          if (_isLast)
+            const SizedBox(width: 40)
+          else
+            TextButton(
+              onPressed: () => context.goNamed('login'),
+              style: TextButton.styleFrom(
+                foregroundColor: _kSlate400,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+              ),
+              child: const Text(
+                'تخطي',
+                style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w500),
               ),
             ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              onTap: () => context.goNamed('login'),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-                child: Text(
-                  'تخطي',
-                  style: TextStyle(
-                    fontFamily: 'IBMPlexSansArabic',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildCard(BuildContext context, _OnboardingPageData page) {
-    final isLast = _currentPage == _pages.length - 1;
-    return FractionallySizedBox(
-      heightFactor: 0.5,
-      child: Container(
-        key: ValueKey('card_$_currentPage'),
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(48)),
-          boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, -4))],
+  Widget _buildContent(BuildContext context, _OnboardingPageData page) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 48,
+          height: 4,
+          decoration: BoxDecoration(color: _kOrange, borderRadius: BorderRadius.circular(999)),
         ),
-        child: Stack(
-          clipBehavior: Clip.none,
+        const SizedBox(height: 16),
+        Text(
+          page.line1,
+          style: const TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 36,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            height: 1.2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _UnderlinedWord(text: page.line2, fontSize: 36),
+        const SizedBox(height: 16),
+        Text(
+          page.subtitle,
+          style: const TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 18,
+            fontWeight: FontWeight.w300,
+            color: _kSlate400,
+            height: 1.625,
+          ),
+        ),
+        const SizedBox(height: 48),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Positioned(
-              top: -40,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 12, offset: Offset(0, 4))],
-                  ),
-                  child: Icon(page.icon, size: 40, color: AppColors.primary),
-                ),
-              ),
-            ),
-            SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 56, 24, 120),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(width: 100, height: 1, color: const Color(0xFFE5E7EB)),
-                        const SizedBox(width: 14),
-                        const Icon(Icons.eco, size: 20, color: AppColors.primary),
-                        const SizedBox(width: 14),
-                        Container(width: 100, height: 1, color: const Color(0xFFE5E7EB)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      page.title,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'IBMPlexSansArabic',
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        page.subtitle,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'IBMPlexSansArabic',
-                          fontSize: 14,
-                          color: Color(0xFF6B7280),
-                          height: 1.7,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(_pages.length, (i) {
-                        final isActive = i == _currentPage;
-                        return GestureDetector(
-                          onTap: () => setState(() => _currentPage = i),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: isActive ? 24 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: isActive ? AppColors.primary : const Color(0xFFD1D5DB),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              left: 24,
-              right: 24,
-              bottom: MediaQuery.of(context).padding.bottom + 12,
-              child: SizedBox(
-                height: 104,
-                width: double.infinity,
-                child: Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    Positioned.fill(
-                      child: const CustomPaint(painter: _CitySilhouettePainter()),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _onNext,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                            elevation: 2,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                isLast ? 'ابدأ' : 'التالي',
-                                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 18, fontWeight: FontWeight.w600),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_back, size: 20),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _buildDots(),
+            _buildActionButton(),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDots() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(_pages.length, (i) {
+        final isActive = i == _currentPage;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 5),
+          width: isActive ? 40 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: isActive ? _kOrange : _kSlate700,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildActionButton() {
+    return Material(
+      color: _isLast ? _kOrange : Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: _isLast ? BorderSide.none : const BorderSide(color: Colors.white, width: 1.5),
+      ),
+      shadowColor: _isLast ? _kOrange.withValues(alpha: 0.25) : Colors.transparent,
+      elevation: _isLast ? 10 : 0,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _onNext,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: _isLast ? 32 : 24, vertical: 16),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _isLast ? 'ابدأ الآن' : 'التالي',
+                style: const TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(
+                _isLast ? Icons.check : Icons.arrow_back,
+                size: 16,
+                color: Colors.white,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -355,43 +290,64 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 class _OnboardingPageData {
   final String image;
-  final IconData icon;
-  final String title;
+  final String line1;
+  final String line2;
   final String subtitle;
 
   const _OnboardingPageData({
     required this.image,
-    required this.icon,
-    required this.title,
+    required this.line1,
+    required this.line2,
     required this.subtitle,
   });
 }
 
-class _CitySilhouettePainter extends CustomPainter {
-  const _CitySilhouettePainter();
+class _UnderlinedWord extends StatelessWidget {
+  final String text;
+  final double fontSize;
+
+  const _UnderlinedWord({required this.text, required this.fontSize});
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontFamily: 'IBMPlexSansArabic',
+      fontSize: fontSize,
+      fontWeight: FontWeight.w700,
+      color: _kOrange,
+      height: 1.2,
+    );
+    return CustomPaint(
+      painter: _UnderlinePainter(text: text, style: style),
+      child: Text(text, style: style),
+    );
+  }
+}
+
+class _UnderlinePainter extends CustomPainter {
+  final String text;
+  final TextStyle style;
+
+  const _UnderlinePainter({required this.text, required this.style});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0x26044465);
-    final sx = size.width / 400;
-    final sy = size.height / 100;
-    final path = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(size.width, size.height);
-
-    void up(double x, double y) => path.lineTo(x * sx, size.height - y * sy);
-
-    up(400, 80); up(380, 80); up(380, 60); up(360, 60); up(360, 90);
-    up(340, 90); up(340, 70); up(320, 70); up(320, 85); up(280, 85);
-    up(280, 50); up(250, 50); up(250, 75); up(220, 75); up(220, 40);
-    up(190, 40); up(190, 80); up(160, 80); up(160, 30); up(130, 30);
-    up(130, 70); up(100, 70); up(100, 60); up(70, 60); up(70, 85);
-    up(40, 85); up(40, 65); up(10, 65); up(10, 90); up(0, 90);
-
-    path.close();
-    canvas.drawPath(path, paint);
+    final tp = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.rtl,
+    )..layout(maxWidth: size.width);
+    tp.paint(canvas, Offset.zero);
+    final metrics = tp.computeLineMetrics();
+    if (metrics.isNotEmpty) {
+      final underlineY = metrics.first.baseline + 8.0;
+      canvas.drawRect(
+        Rect.fromLTWH(0, underlineY, tp.width, 2),
+        Paint()..color = _kOrange,
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _UnderlinePainter oldDelegate) =>
+      oldDelegate.text != text || oldDelegate.style != style;
 }

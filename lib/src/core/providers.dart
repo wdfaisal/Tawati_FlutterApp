@@ -15,7 +15,7 @@ import 'socket_service.dart';
 final apiClientProvider = Provider<ApiClient>((ref) {
   const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.131.43.29:3000/api',
+    defaultValue: 'http://10.241.147.29:3000/api',
   );
   return ApiClient(baseUrl: baseUrl);
 });
