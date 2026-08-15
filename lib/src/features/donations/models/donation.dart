@@ -11,6 +11,7 @@
   final DateTime? endDate;
   final String status;
   final List<String> availablePaymentMethods;
+  final List<PaymentMethod> paymentMethods;
   final int? donorCount;
 
   Campaign({
@@ -26,27 +27,40 @@
     this.endDate,
     required this.status,
     required this.availablePaymentMethods,
+    this.paymentMethods = const [],
     this.donorCount,
   });
 
-  factory Campaign.fromJson(Map<String, dynamic> json) => Campaign(
-    id: json['_id'] ?? json['id'] ?? '',
-    fundId: Campaign._id(json['fund_id']),
-    fundName: Campaign._name(json['fund_id'], json['fund_name'], 'name_ar'),
-    title: json['title'] ?? '',
-    description: json['description'],
-    image: json['image'],
-    targetAmount: (json['target_amount'] ?? 0).toDouble(),
-    collectedAmount: (json['collected_amount'] ?? 0).toDouble(),
-    startDate: DateTime.tryParse(json['start_date'] ?? '') ?? DateTime.now(),
-    endDate: json['end_date'] != null ? DateTime.tryParse(json['end_date']) : null,
-    status: json['status'] ?? 'active',
-    availablePaymentMethods: (json['available_payment_methods'] as List<dynamic>?)
-            ?.map((e) => e is String ? e : (e as Map<String, dynamic>)['_id'] as String? ?? '')
-            .toList() ??
-        [],
-    donorCount: json['donor_count'],
-  );
+  factory Campaign.fromJson(Map<String, dynamic> json) {
+    final rawMethods = (json['available_payment_methods'] as List<dynamic>?) ?? const [];
+    final methods = rawMethods
+        .whereType<Map>()
+        .map((e) => PaymentMethod.fromJson(
+              e.map((k, v) => MapEntry(k.toString(), v)),
+            ))
+        .toList();
+    return Campaign(
+      id: json['_id'] ?? json['id'] ?? '',
+      fundId: Campaign._id(json['fund_id']),
+      fundName: Campaign._name(json['fund_id'], json['fund_name'], 'name_ar'),
+      title: json['title'] ?? '',
+      description: json['description'],
+      image: json['image'],
+      targetAmount: (json['target_amount'] ?? 0).toDouble(),
+      collectedAmount: (json['collected_amount'] ?? 0).toDouble(),
+      startDate: DateTime.tryParse(json['start_date'] ?? '') ?? DateTime.now(),
+      endDate: json['end_date'] != null ? DateTime.tryParse(json['end_date']) : null,
+      status: json['status'] ?? 'active',
+      availablePaymentMethods: methods.isNotEmpty
+          ? methods.map((m) => m.id).toList()
+          : (json['available_payment_methods'] as List<dynamic>?)
+                  ?.whereType<String>()
+                  .toList() ??
+              [],
+      paymentMethods: methods,
+      donorCount: json['donor_count'],
+    );
+  }
 
   Campaign copyWith({
     double? collectedAmount,
@@ -67,6 +81,7 @@
       endDate: endDate,
       status: status ?? this.status,
       availablePaymentMethods: availablePaymentMethods,
+      paymentMethods: paymentMethods,
       donorCount: donorCount ?? this.donorCount,
     );
   }

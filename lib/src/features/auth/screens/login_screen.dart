@@ -249,18 +249,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             fit: BoxFit.contain,
                           ),
                         ),
-                        const SizedBox(height: 14),
-                        const Center(
-                          child: Text(
-                            'منصة تواتي الرقمية',
-                            style: TextStyle(
-                              fontFamily: 'IBMPlexSansArabic',
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                              color: _kLabelColor,
-                            ),
-                          ),
-                        ),
                         const SizedBox(height: 16),
                         const Center(
                           child: Text(

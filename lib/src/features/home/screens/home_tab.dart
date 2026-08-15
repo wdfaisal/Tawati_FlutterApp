@@ -6,6 +6,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
+import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/news/models/news.dart';
 import 'package:tawati_mobile/src/features/initiatives/models/initiative.dart';
 import 'package:tawati_mobile/src/features/donations/models/donation.dart';
@@ -67,8 +68,8 @@ class HomeTab extends ConsumerWidget {
               ),
               const _Greeting(),
               _QuickActionsRow(
-                onAddAnnouncement: () => context.push('/news'),
-                onAddDeath: () => context.push('/news'),
+                onAddAnnouncement: () => context.push('/add-announcement'),
+                onAddDeath: () => context.push('/add-obituary'),
                 onOpenChats: onOpenGroups ?? () {},
                 onDonate: onOpenDonations ?? () {},
               ),
@@ -316,23 +317,25 @@ class _SearchButton extends StatelessWidget {
   }
 }
 
-class _Greeting extends StatelessWidget {
+class _Greeting extends ConsumerWidget {
   const _Greeting();
 
   @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(24, 4, 24, 20),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = ref.watch(authProvider).user?.fullNameAr ?? '';
+    final greeting = name.isEmpty ? 'أهلاً بك في تواتي' : 'أهلاً بك، $name';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'أهلاً بك في تواتي',
+            greeting,
             textAlign: TextAlign.start,
-            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.primary),
+            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.primary),
           ),
-          SizedBox(height: 2),
-          Text(
+          const SizedBox(height: 2),
+          const Text(
             'اكتشف آخر الأخبار والفعاليات في مجتمعك',
             textAlign: TextAlign.start,
             style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted),

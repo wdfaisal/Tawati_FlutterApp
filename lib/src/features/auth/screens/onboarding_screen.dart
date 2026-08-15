@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:tawati_mobile/src/core/theme/app_theme.dart';
+const _kBgDark = Color(0xFF0F172A); // slate-900
+const _kOrange = Color(0xFFF97316); // orange-500
+const _kSlate700 = Color(0xFF334155);
+const _kSlate400 = Color(0xFF94A3B8);
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -17,21 +20,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   static const _pages = [
     _OnboardingPageData(
       image: 'assets/images/Splash_Screen_Image_4.png',
-      icon: Icons.groups_rounded,
       line1: 'منصة تواتي للخدمة',
       line2: 'المجتمعية',
       subtitle: 'ساهم في تنمية مجتمعك وكن جزءاً من مبادرات تواتي الهادفة التي تجمعنا جميعاً كن جزء من «تواتي عالم جميل».',
     ),
     _OnboardingPageData(
       image: 'assets/images/onboarding_bg_2.png',
-      icon: Icons.badge_rounded,
       line1: 'هوية تواتي',
       line2: 'الرقمية',
       subtitle: 'لأننا نعتز بهويتنا التواتية وثقناها رقمياً، ثق بياناتك واحصل على هوية تواتي الرقمية.',
     ),
     _OnboardingPageData(
       image: 'assets/images/onboarding_bg_3.png',
-      icon: Icons.family_restroom_rounded,
       line1: 'تواصل أسري',
       line2: 'مترابط',
       subtitle: 'ابقَ على اتصال دائم مع عائلتك وشاركهم اللحظات والخدمات في بيئة رقمية آمنة وخاصة.',
@@ -63,12 +63,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarBrightness: Brightness.light,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
           systemStatusBarContrastEnforced: false,
         ),
         child: Scaffold(
-          backgroundColor: AppColors.surface,
+          backgroundColor: _kBgDark,
           body: GestureDetector(
             onHorizontalDragEnd: (details) {
               if (details.primaryVelocity != null) {
@@ -80,7 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               }
             },
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
+              duration: const Duration(milliseconds: 500),
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
               transitionBuilder: (child, animation) {
@@ -104,78 +104,88 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPage(BuildContext context, _OnboardingPageData page) {
-    return Column(
+    return Stack(
       key: ValueKey('page_$_currentPage'),
+      fit: StackFit.expand,
       children: [
-        SafeArea(
-          bottom: false,
-          child: _buildTopNav(context),
+        Image.asset(
+          page.image,
+          fit: BoxFit.cover,
+          opacity: const AlwaysStoppedAnimation(0.8),
+          errorBuilder: (_, _, _) => const ColoredBox(color: _kBgDark),
         ),
-        Expanded(
-          child: Stack(
-            fit: StackFit.expand,
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0x000F172A),
+                Color(0xE60F172A),
+                _kBgDark,
+              ],
+              stops: [0.0, 0.7, 1.0],
+            ),
+          ),
+        ),
+        SafeArea(
+          child: Column(
             children: [
-              Image.asset(
-                page.image,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const ColoredBox(color: AppColors.primaryLight),
-              ),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0x00F8FAFC),
-                      Color(0x000F172A),
-                      Color(0xFFF8FAFC),
-                    ],
-                    stops: [0.0, 0.55, 1.0],
-                  ),
+              _buildTopNav(context),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: IntrinsicHeight(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(40, 0, 40, 48),
+                                child: _buildContent(context, page),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
         ),
-        _buildContent(context, page),
       ],
     );
   }
 
   Widget _buildTopNav(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+      padding: const EdgeInsets.all(32),
       child: Row(
         children: [
           Image.asset(
             'assets/images/splash_logo.png',
-            height: 48,
+            height: 56,
             fit: BoxFit.contain,
-            errorBuilder: (_, _, _) => const SizedBox(width: 48, height: 48),
+            errorBuilder: (_, _, _) => const SizedBox(width: 56, height: 56),
           ),
           const Spacer(),
           if (_isLast)
             const SizedBox(width: 40)
           else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => context.pushNamed('login'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                  child: const Text(
-                    'تخطي',
-                    style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                Text(
-                  'يُقبل طلب انضمامك بعد مراجعة الإدارة',
-                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: AppColors.textHint),
-                ),
-              ],
+            TextButton(
+              onPressed: () => context.pushNamed('login'),
+              style: TextButton.styleFrom(
+                foregroundColor: _kSlate400,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+              ),
+              child: const Text(
+                'تخطي',
+                style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w500),
+              ),
             ),
         ],
       ),
@@ -183,63 +193,47 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildContent(BuildContext context, _OnboardingPageData page) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 48,
+          height: 4,
+          decoration: BoxDecoration(color: _kOrange, borderRadius: BorderRadius.circular(999)),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          page.line1,
+          style: const TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 36,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            height: 1.2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _UnderlinedWord(text: page.line2, fontSize: 36),
+        const SizedBox(height: 16),
+        Text(
+          page.subtitle,
+          style: const TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 18,
+            fontWeight: FontWeight.w300,
+            color: _kSlate400,
+            height: 1.625,
+          ),
+        ),
+        const SizedBox(height: 48),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Center(
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryLight,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(page.icon, size: 32, color: AppColors.primary),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              page.line1,
-              style: const TextStyle(
-                fontFamily: 'IBMPlexSansArabic',
-                fontSize: 26,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-                height: 1.25,
-              ),
-            ),
-            const SizedBox(height: 4),
-            _UnderlinedWord(text: page.line2, fontSize: 26),
-            const SizedBox(height: 12),
-            Text(
-              page.subtitle,
-              style: const TextStyle(
-                fontFamily: 'IBMPlexSansArabic',
-                fontSize: 15,
-                fontWeight: FontWeight.w400,
-                color: AppColors.textSecondary,
-                height: 1.7,
-              ),
-            ),
-            const SizedBox(height: 28),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildDots(),
-                _buildActionButton(),
-              ],
-            ),
+            _buildDots(),
+            _buildActionButton(),
           ],
         ),
-      ),
+      ],
     );
   }
 
@@ -251,11 +245,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: isActive ? 32 : 8,
+          margin: const EdgeInsets.symmetric(horizontal: 5),
+          width: isActive ? 40 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: isActive ? AppColors.primary : AppColors.border,
+            color: isActive ? _kOrange : _kSlate700,
             borderRadius: BorderRadius.circular(999),
           ),
         );
@@ -265,35 +259,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildActionButton() {
     return Material(
-      color: _isLast ? AppColors.primary : Colors.transparent,
+      color: _isLast ? _kOrange : Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: _isLast ? BorderSide.none : const BorderSide(color: AppColors.primary, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        side: _isLast ? BorderSide.none : const BorderSide(color: Colors.white, width: 1.5),
       ),
-      shadowColor: AppColors.primary.withValues(alpha: 0.28),
+      shadowColor: _isLast ? _kOrange.withValues(alpha: 0.25) : Colors.transparent,
       elevation: _isLast ? 10 : 0,
       child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         onTap: _onNext,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: _isLast ? 36 : 24, vertical: 16),
+          padding: EdgeInsets.symmetric(horizontal: _isLast ? 32 : 24, vertical: 16),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 _isLast ? 'ابدأ الآن' : 'التالي',
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'IBMPlexSansArabic',
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: _isLast ? Colors.white : AppColors.primary,
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(width: 12),
               Icon(
                 _isLast ? Icons.check : Icons.arrow_back,
                 size: 16,
-                color: _isLast ? Colors.white : AppColors.primary,
+                color: Colors.white,
               ),
             ],
           ),
@@ -305,14 +299,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 class _OnboardingPageData {
   final String image;
-  final IconData icon;
   final String line1;
   final String line2;
   final String subtitle;
 
   const _OnboardingPageData({
     required this.image,
-    required this.icon,
     required this.line1,
     required this.line2,
     required this.subtitle,
@@ -331,8 +323,8 @@ class _UnderlinedWord extends StatelessWidget {
       fontFamily: 'IBMPlexSansArabic',
       fontSize: fontSize,
       fontWeight: FontWeight.w700,
-      color: AppColors.primary,
-      height: 1.25,
+      color: _kOrange,
+      height: 1.2,
     );
     return CustomPaint(
       painter: _UnderlinePainter(text: text, style: style),
@@ -355,13 +347,10 @@ class _UnderlinePainter extends CustomPainter {
     )..layout(maxWidth: size.width);
     final metrics = tp.computeLineMetrics();
     if (metrics.isNotEmpty) {
-      final underlineY = metrics.first.baseline + 6.0;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, underlineY, tp.width, 3),
-          const Radius.circular(3),
-        ),
-        Paint()..color = AppColors.primary,
+      final underlineY = metrics.first.baseline + 8.0;
+      canvas.drawRect(
+        Rect.fromLTWH(0, underlineY, tp.width, 2),
+        Paint()..color = _kOrange,
       );
     }
   }

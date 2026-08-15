@@ -5,7 +5,6 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
-import 'package:tawati_mobile/src/core/socket_service.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
 import 'package:tawati_mobile/src/features/donations/models/donation.dart';
 
@@ -576,21 +575,18 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => DonationBottomSheet(
-        campaignId: widget.campaignId,
-        campaignTitle: _campaign?.title ?? '',
+        campaign: _campaign!,
       ),
     );
   }
 }
 
 class DonationBottomSheet extends ConsumerStatefulWidget {
-  final String campaignId;
-  final String campaignTitle;
+  final Campaign campaign;
 
   const DonationBottomSheet({
     super.key,
-    required this.campaignId,
-    required this.campaignTitle,
+    required this.campaign,
   });
 
   @override
@@ -618,10 +614,25 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
       final amount = double.parse(_amountController.text);
 
       if (_isManual) {
+        final manualMethods = widget.campaign.paymentMethods
+            .where((m) => m.type == 'manual')
+            .toList();
+        if (manualMethods.isEmpty) {
+          if (mounted) {
+            setState(() => _submitting = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('لا توجد طريقة دفع يدوية متاحة لهذه الحملة', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
+        }
         await ref.read(donationServiceProvider).createManualDonation(
-              campaignId: widget.campaignId,
+              campaignId: widget.campaign.id,
               amount: amount,
-              paymentMethodId: 'manual_transfer',
+              paymentMethodId: manualMethods.first.id,
             );
         if (mounted) {
           Navigator.of(context).pop();
@@ -657,7 +668,7 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
   Future<void> _handleStripePayment(double amount) async {
     final apiClient = ref.read(apiClientProvider);
     final response = await apiClient.post('/payments/stripe/create-intent', data: {
-      'campaign_id': widget.campaignId,
+      'campaign_id': widget.campaign.id,
       'amount': amount,
     });
     final clientSecret = response.data['data']['clientSecret'] as String;
@@ -724,7 +735,7 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
               const SizedBox(height: 20),
               const Text('تبرع الآن', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
               const SizedBox(height: 4),
-              Text(widget.campaignTitle, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: AppColors.textSecondary)),
+              Text(widget.campaign.title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: AppColors.textSecondary)),
               const SizedBox(height: 20),
               TextFormField(
                 controller: _amountController,

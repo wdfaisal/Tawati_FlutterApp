@@ -80,6 +80,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
       final message = GroupMessage.fromSocketJson(data);
       if (message.groupId != widget.groupId) return;
       if (!mounted) return;
+      final currentUserId = _currentUserId;
       setState(() {
         final existingIndex = _messages.indexWhere((m) => m.id == message.id);
         if (existingIndex >= 0) {
@@ -90,12 +91,13 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           (m) =>
               m.id.startsWith('local-') &&
               m.senderId == message.senderId &&
-              m.content == message.content &&
-              message.createdAt.difference(m.createdAt).abs().inMinutes <= 2,
+              m.content == message.content,
         );
         if (optimisticIndex >= 0) {
           _messages[optimisticIndex] = message;
-        } else {
+        } else if (currentUserId == null ||
+            currentUserId.isEmpty ||
+            message.senderId != currentUserId) {
           _messages.add(message);
         }
       });
@@ -189,16 +191,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
       delivered = true;
       if (mounted) {
         setState(() {
+          _messages.removeWhere((m) => m.id == message.id);
           final idx = _messages.indexWhere((m) => m.id == optimistic.id);
           if (idx >= 0) {
             _messages[idx] = message.copyWith(sendStatus: 'sent');
           } else {
-            final serverIdx = _messages.indexWhere((m) => m.id == message.id);
-            if (serverIdx >= 0) {
-              _messages[serverIdx] = message.copyWith(sendStatus: 'sent');
-            } else {
-              _messages.add(message.copyWith(sendStatus: 'sent'));
-            }
+            _messages.add(message.copyWith(sendStatus: 'sent'));
           }
         });
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -240,16 +238,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         final message = await ref.read(groupServiceProvider).sendMessage(widget.groupId, content);
         if (!mounted) return;
         setState(() {
+          _messages.removeWhere((m) => m.id == message.id);
           final idx = _messages.indexWhere((m) => m.id == optimistic.id);
           if (idx >= 0) {
             _messages[idx] = message.copyWith(sendStatus: 'sent');
           } else {
-            final serverIdx = _messages.indexWhere((m) => m.id == message.id);
-            if (serverIdx >= 0) {
-              _messages[serverIdx] = message.copyWith(sendStatus: 'sent');
-            } else {
-              _messages.add(message.copyWith(sendStatus: 'sent'));
-            }
+            _messages.add(message.copyWith(sendStatus: 'sent'));
           }
         });
       } catch (_) {
@@ -463,8 +457,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
 
   Widget _buildHeader() {
     final isMutedLocally = ref.watch(localMutedGroupsProvider).contains(widget.groupId);
+    final topPadding = MediaQuery.of(context).padding.top;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.fromLTRB(16, topPadding + 10, 16, 10),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: _kFieldBorder)),
@@ -658,9 +653,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final showSenderName = !isMine && _shouldShowSenderName(message);
 
     return Align(
-      alignment: isMine ? Alignment.centerLeft : Alignment.centerRight,
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Column(
-        crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isMine ? CrossAxisAlignment.start : CrossAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
           if (showSenderName)
@@ -685,14 +680,14 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 color: isMine ? _kChatBlue : _kIncomingBubble,
                 borderRadius: isMine
                     ? const BorderRadius.only(
-                        topLeft: Radius.circular(4),
-                        topRight: Radius.circular(16),
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(4),
                         bottomLeft: Radius.circular(16),
                         bottomRight: Radius.circular(16),
                       )
                     : const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(4),
+                        topLeft: Radius.circular(4),
+                        topRight: Radius.circular(16),
                         bottomLeft: Radius.circular(16),
                         bottomRight: Radius.circular(16),
                       ),
@@ -704,7 +699,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             padding: const EdgeInsets.only(top: 4, right: 4, left: 4),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+              mainAxisAlignment: isMine ? MainAxisAlignment.start : MainAxisAlignment.end,
               children: [
                 Text(
                   timeStr,
