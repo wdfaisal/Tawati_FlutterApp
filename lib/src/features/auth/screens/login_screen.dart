@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -205,9 +206,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+          systemStatusBarContrastEnforced: false,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarIconBrightness: Brightness.dark,
+          systemNavigationBarContrastEnforced: false,
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          resizeToAvoidBottomInset: false,
+          body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
               final contentWidth = (constraints.maxWidth - 64).clamp(0.0, 347.0).toDouble();
@@ -237,7 +249,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             fit: BoxFit.contain,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
+                        const Center(
+                          child: Text(
+                            'منصة تواتي الرقمية',
+                            style: TextStyle(
+                              fontFamily: 'IBMPlexSansArabic',
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              color: _kLabelColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         const Center(
                           child: Text(
                             'الرجاء تسجيل الدخول لمتابعة رحلتك معنا',
@@ -634,6 +658,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             },
           ),
         ),
+      ),
       ),
     );
   }

@@ -31,7 +31,16 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
+
+  void _openTab(String title) {
+    if (!mounted) return;
+    final index = _visibleTabs(ref.read(appConfigProvider)).indexWhere((t) => t.title == title);
+    if (index >= 0) {
+      setState(() => _currentIndex = index);
+    }
+  }
 
   List<_NavTab> _visibleTabs(Map<String, dynamic> config) {
     final modules = (config['modules'] as Map<String, dynamic>?) ?? const {};
@@ -39,8 +48,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final groupsEnabled = modules['groups'] != false;
 
     return [
-      const _NavTab(
-        screen: HomeTab(),
+      _NavTab(
+        screen: HomeTab(
+          onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+          onOpenDonations: () => _openTab('التبرعات'),
+          onOpenGroups: () => _openTab('المجموعات'),
+        ),
         title: 'الرئيسية',
         icon: Icons.home_outlined,
         activeIcon: Icons.home,
@@ -88,6 +101,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: AppColors.surface,
         drawer: const AppDrawer(),
         body: IndexedStack(
@@ -98,7 +112,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 16, offset: const Offset(0, -4)),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, -4)),
             ],
           ),
           child: SafeArea(

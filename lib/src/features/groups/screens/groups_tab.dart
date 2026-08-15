@@ -24,14 +24,14 @@ class GroupsTab extends ConsumerStatefulWidget {
 }
 
 class _GroupsTabState extends ConsumerState<GroupsTab> {
-  static const List<String> _tabs = ['المناسبات', 'الوفيات', 'الإعلانات', 'الدردشات'];
+  static const List<String> _tabs = ['الدردشات', 'المناسبات', 'الوفيات', 'الإعلانات'];
 
   List<Group> _allGroups = [];
   bool _loading = true;
   String? _error;
   final Set<String> _joiningGroupIds = <String>{};
 
-  int _tabIndex = 3;
+  int _tabIndex = 0;
   bool _searchActive = false;
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
@@ -124,7 +124,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
             Expanded(child: _buildTabContent()),
           ],
         ),
-        floatingActionButton: _tabIndex == 3 && !_searchActive
+        floatingActionButton: _tabIndex == 0 && !_searchActive
             ? FloatingActionButton(
                 onPressed: _showJoinSheet,
                 backgroundColor: AppColors.primary,
@@ -154,12 +154,12 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _buildSearchButton(),
                 SizedBox(
                   width: 100,
                   height: 40,
                   child: Image.asset('assets/images/splash_logo.png', fit: BoxFit.contain),
                 ),
+                _buildSearchButton(),
               ],
             ),
           ),
@@ -229,7 +229,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
   Widget _buildTabContent() {
     if (_loading) return _buildShimmer();
     if (_error != null) return _buildError();
-    if (_tabIndex != 3) return _buildEmptyTab(_tabIndex);
+    if (_tabIndex != 0) return _buildEmptyTab(_tabIndex);
 
     final chats = _allGroups.where((g) => g.isMember).toList();
     final query = _query.trim();
@@ -310,6 +310,8 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
           decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: _kDivider))),
           child: Row(
             children: [
+              _buildAvatar(group),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -366,8 +368,6 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
-              _buildAvatar(group),
             ],
           ),
         ),
@@ -488,8 +488,8 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
 
   Widget _buildEmptyTab(int index) {
     final (IconData icon, String title) = switch (index) {
-      0 => (Icons.event_available_outlined, 'لا توجد مناسبات حالياً'),
-      1 => (Icons.local_florist_outlined, 'لا توجد وفيات حالياً'),
+      1 => (Icons.event_available_outlined, 'لا توجد مناسبات حالياً'),
+      2 => (Icons.local_florist_outlined, 'لا توجد وفيات حالياً'),
       _ => (Icons.campaign_outlined, 'لا توجد إعلانات حالياً'),
     };
     return Center(
@@ -553,6 +553,8 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Row(
           children: [
+            skeletonCircle(size: 56),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -569,8 +571,6 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                 ],
               ),
             ),
-            const SizedBox(width: 16),
-            skeletonCircle(size: 56),
           ],
         ),
       ),
