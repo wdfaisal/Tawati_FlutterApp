@@ -224,7 +224,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             builder: (context, constraints) {
               final contentWidth = (constraints.maxWidth - 64).clamp(0.0, 347.0).toDouble();
               final viewInsets = MediaQuery.viewInsetsOf(context).bottom;
-              final fullHeight = constraints.maxHeight + viewInsets;
+              final fullHeight = constraints.maxHeight;
               return SingleChildScrollView(
                 child: Padding(
                   padding: EdgeInsets.only(bottom: viewInsets),

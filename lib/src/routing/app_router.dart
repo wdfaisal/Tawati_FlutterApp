@@ -16,6 +16,7 @@ import 'package:tawati_mobile/src/features/family/screens/family_tree_screen.dar
 import 'package:tawati_mobile/src/features/initiatives/screens/initiatives_tab.dart';
 import 'package:tawati_mobile/src/features/initiatives/screens/initiative_detail_screen.dart';
 import 'package:tawati_mobile/src/features/groups/screens/group_chat_screen.dart';
+import 'package:tawati_mobile/src/features/notifications/screens/notifications_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -136,6 +137,11 @@ final appRouter = GoRouter(
       path: '/my-donations',
       name: 'myDonations',
       builder: (c, s) => const MyDonationsScreen(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      name: 'notifications',
+      builder: (c, s) => const NotificationsScreen(),
     ),
   ],
 );

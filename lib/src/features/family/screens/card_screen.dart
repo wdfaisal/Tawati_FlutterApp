@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
@@ -18,7 +19,7 @@ class CardScreen extends ConsumerWidget {
 
     if (authState.isLoading) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: Colors.white,
         appBar: AppBar(
           title: const Text('الهوية الرقمية'),
           backgroundColor: Colors.white,
@@ -42,6 +43,7 @@ class CardScreen extends ConsumerWidget {
 
     if (user == null) {
       return Scaffold(
+        backgroundColor: Colors.white,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
@@ -69,7 +71,7 @@ class CardScreen extends ConsumerWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.surface,
+        backgroundColor: Colors.white,
         appBar: AppBar(
           title: const Text('الهوية الرقمية'),
           backgroundColor: Colors.white,
@@ -79,7 +81,7 @@ class CardScreen extends ConsumerWidget {
           actions: [
             IconButton(
               icon: const Icon(Icons.notifications_outlined, color: AppColors.textSecondary),
-              onPressed: () {},
+              onPressed: () => context.push('/notifications'),
             ),
           ],
         ),
@@ -235,7 +237,14 @@ class CardScreen extends ConsumerWidget {
           decoration: BoxDecoration(
             color: AppColors.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border.withOpacity(0.5)),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             children: [
@@ -262,7 +271,7 @@ class CardScreen extends ConsumerWidget {
 
   Widget _divider() => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Divider(height: 1, color: AppColors.border.withOpacity(0.5)),
+    child: Divider(height: 1, color: AppColors.border.withValues(alpha: 0.6)),
   );
 
   Widget _buildActions(dynamic user, BuildContext ctx) {
@@ -414,16 +423,13 @@ class _DigitalCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.primary, AppColors.primaryDark],
-          ),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.border, width: 1),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
-              blurRadius: 20,
+              color: AppColors.primary.withValues(alpha: 0.06),
+              blurRadius: 24,
               offset: const Offset(0, 8),
             ),
           ],
@@ -443,13 +449,13 @@ class _DigitalCard extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'الهوية الرقمية',
                                   style: TextStyle(
                                     fontFamily: 'IBMPlexSansArabic',
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.white.withValues(alpha: 0.8),
+                                    color: AppColors.primary,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
@@ -459,7 +465,7 @@ class _DigitalCard extends StatelessWidget {
                                     fontFamily: 'IBMPlexSansArabic',
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    color: AppColors.textPrimary,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -471,7 +477,7 @@ class _DigitalCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF34D399).withValues(alpha: 0.2),
+                              color: AppColors.primaryLight,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -481,18 +487,18 @@ class _DigitalCard extends StatelessWidget {
                                   width: 7,
                                   height: 7,
                                   decoration: const BoxDecoration(
-                                    color: Color(0xFF34D399),
+                                    color: AppColors.success,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
                                 const SizedBox(width: 5),
-                                Text(
+                                const Text(
                                   'عضو نشط',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'IBMPlexSansArabic',
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6EE7B7),
+                                    color: AppColors.primary,
                                   ),
                                 ),
                               ],
@@ -503,15 +509,15 @@ class _DigitalCard extends StatelessWidget {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(Icons.badge_outlined, size: 13, color: Colors.white.withValues(alpha: 0.6)),
+                          const Icon(Icons.badge_outlined, size: 13, color: AppColors.textSecondary),
                           const SizedBox(width: 6),
                           Text(
                             memberNumber,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontFamily: 'IBMPlexSansArabic',
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: AppColors.textPrimary,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -531,23 +537,23 @@ class _DigitalCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'تواتي الرقمية',
                                 style: TextStyle(
                                   fontFamily: 'IBMPlexSansArabic',
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.white.withValues(alpha: 0.6),
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
-                              Text(
+                              const Text(
                                 'TOWATI DIGITAL ID',
                                 style: TextStyle(
                                   fontFamily: 'IBMPlexSansArabic',
                                   fontSize: 9,
                                   letterSpacing: 1.2,
                                   fontWeight: FontWeight.w400,
-                                  color: Colors.white.withValues(alpha: 0.5),
+                                  color: AppColors.textHint,
                                 ),
                               ),
                             ],
@@ -557,16 +563,16 @@ class _DigitalCard extends StatelessWidget {
                             width: 74,
                             height: 74,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
+                              color: AppColors.primaryLight,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
+                                color: AppColors.primary.withValues(alpha: 0.15),
                               ),
                             ),
                             child: const Icon(
                               Icons.verified_user,
                               size: 38,
-                              color: Colors.white,
+                              color: AppColors.primary,
                             ),
                           ),
                         ],
@@ -576,26 +582,26 @@ class _DigitalCard extends StatelessWidget {
                         children: [
                           Text(
                             joinedAt,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontFamily: 'IBMPlexSansArabic',
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const Spacer(),
-                          Row(
+                          const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.verified, color: Color(0xFF6EE7B7), size: 16),
-                              const SizedBox(width: 4),
+                              Icon(Icons.verified, color: AppColors.primary, size: 16),
+                              SizedBox(width: 4),
                               Text(
                                 'موثق',
                                 style: TextStyle(
                                   fontFamily: 'IBMPlexSansArabic',
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.white.withValues(alpha: 0.8),
+                                  color: AppColors.primary,
                                 ),
                               ),
                             ],
@@ -624,7 +630,7 @@ class _DigitalCard extends StatelessWidget {
             height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.05),
+              color: AppColors.primary.withValues(alpha: 0.04),
             ),
           ),
         ),
@@ -636,7 +642,7 @@ class _DigitalCard extends StatelessWidget {
             height: 160,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.05),
+              color: AppColors.primary.withValues(alpha: 0.04),
             ),
           ),
         ),
@@ -648,7 +654,7 @@ class _DigitalCard extends StatelessWidget {
             height: 20,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.07),
+              color: AppColors.primary.withValues(alpha: 0.06),
             ),
           ),
         ),
@@ -660,7 +666,7 @@ class _DigitalCard extends StatelessWidget {
             height: 12,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.07),
+              color: AppColors.primary.withValues(alpha: 0.06),
             ),
           ),
         ),

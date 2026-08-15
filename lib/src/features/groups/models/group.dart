@@ -152,17 +152,32 @@ class GroupMessage {
         .toList();
   }
 
-  factory GroupMessage.fromJson(Map<String, dynamic> json) => GroupMessage(
-    id: json['_id'] ?? json['id'] ?? '',
-    groupId: json['group_id'] ?? '',
-    senderId: json['sender_id'] ?? '',
-    senderName: json['sender_name'] ?? '',
-    senderAvatar: json['sender_avatar'],
-    content: json['content'] ?? '',
-    type: json['type'] ?? 'text',
-    createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
-    reactions: _parseReactions(json['reactions']),
-  );
+  factory GroupMessage.fromJson(Map<String, dynamic> json) {
+    final sender = json['sender_id'];
+    final String senderId;
+    final String senderName;
+    final String? senderAvatar;
+    if (sender is Map) {
+      senderId = sender['_id']?.toString() ?? '';
+      senderName = sender['full_name']?.toString() ?? '';
+      senderAvatar = sender['avatar_image']?.toString();
+    } else {
+      senderId = sender?.toString() ?? '';
+      senderName = json['sender_name']?.toString() ?? '';
+      senderAvatar = json['sender_avatar']?.toString();
+    }
+    return GroupMessage(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      groupId: json['group_id']?.toString() ?? '',
+      senderId: senderId,
+      senderName: senderName,
+      senderAvatar: senderAvatar,
+      content: json['content']?.toString() ?? '',
+      type: json['content_type']?.toString() ?? json['type']?.toString() ?? 'text',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      reactions: _parseReactions(json['reactions']),
+    );
+  }
 
   factory GroupMessage.fromSocketJson(Map<String, dynamic> json) {
     final sender = json['sender_id'];

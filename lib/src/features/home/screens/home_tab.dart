@@ -9,6 +9,7 @@ import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
 import 'package:tawati_mobile/src/features/news/models/news.dart';
 import 'package:tawati_mobile/src/features/initiatives/models/initiative.dart';
 import 'package:tawati_mobile/src/features/donations/models/donation.dart';
+import 'package:tawati_mobile/src/features/notifications/providers/notifications_provider.dart';
 
 const Color _kSoftBg = Color(0xFFF1F5F8);
 const Color _kMuted = Color(0xFF9CAFB8);
@@ -41,6 +42,7 @@ class HomeTab extends ConsumerWidget {
     final newsAsync = ref.watch(_newsProvider);
     final initiativesAsync = ref.watch(_initiativesProvider);
     final campaignsAsync = ref.watch(_campaignsProvider);
+    final unreadCount = ref.watch(notificationsProvider).valueOrNull?.unread ?? 0;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -51,6 +53,7 @@ class HomeTab extends ConsumerWidget {
             ref.invalidate(_newsProvider);
             ref.invalidate(_initiativesProvider);
             ref.invalidate(_campaignsProvider);
+            ref.invalidate(notificationsProvider);
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -59,6 +62,8 @@ class HomeTab extends ConsumerWidget {
               _HomeHeader(
                 onOpenDrawer: onOpenDrawer,
                 onSearch: () => _openSearchSheet(context, ref),
+                onNotifications: () => context.push('/notifications'),
+                unreadCount: unreadCount,
               ),
               const _Greeting(),
               _QuickActionsRow(
@@ -184,8 +189,10 @@ class HomeTab extends ConsumerWidget {
 class _HomeHeader extends StatelessWidget {
   final VoidCallback? onOpenDrawer;
   final VoidCallback? onSearch;
+  final VoidCallback? onNotifications;
+  final int unreadCount;
 
-  const _HomeHeader({this.onOpenDrawer, this.onSearch});
+  const _HomeHeader({this.onOpenDrawer, this.onSearch, this.onNotifications, this.unreadCount = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +210,64 @@ class _HomeHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          _NotificationsButton(onTap: onNotifications, unreadCount: unreadCount),
+          const SizedBox(width: 12),
           _SearchButton(onTap: onSearch),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationsButton extends StatelessWidget {
+  final VoidCallback? onTap;
+  final int unreadCount;
+
+  const _NotificationsButton({this.onTap, this.unreadCount = 0});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Material(
+              color: _kSoftBg,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onTap,
+                child: const Icon(Icons.notifications_none_rounded, size: 20, color: AppColors.primary),
+              ),
+            ),
+          ),
+          if (unreadCount > 0)
+            Positioned(
+              top: -2,
+              right: -2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                decoration: BoxDecoration(
+                  color: _kRed,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  unreadCount > 9 ? '٩+' : _toArabicDigits('$unreadCount'),
+                  style: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 9,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -260,15 +324,17 @@ class _Greeting extends StatelessWidget {
     return const Padding(
       padding: EdgeInsets.fromLTRB(24, 4, 24, 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'أهلاً بك في تواتي',
+            textAlign: TextAlign.start,
             style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.primary),
           ),
           SizedBox(height: 2),
           Text(
             'اكتشف آخر الأخبار والفعاليات في مجتمعك',
+            textAlign: TextAlign.start,
             style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted),
           ),
         ],
