@@ -13,6 +13,9 @@
   final String? myPermission;
   final String? myMemberStatus;
   final DateTime createdAt;
+  final String? lastMessage;
+  final DateTime? lastMessageAt;
+  final bool isOnline;
 
   Group({
     required this.id,
@@ -29,6 +32,9 @@
     this.myPermission,
     this.myMemberStatus,
     required this.createdAt,
+    this.lastMessage,
+    this.lastMessageAt,
+    this.isOnline = false,
   });
 
   bool get isViewOnly => myPermission == 'view_only';
@@ -72,6 +78,11 @@
     myPermission: json['my_permission'],
     myMemberStatus: json['my_member_status'],
     createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
+    lastMessage: json['last_message']?.toString() ?? json['lastMessage']?.toString(),
+    lastMessageAt: DateTime.tryParse(
+      json['last_message_at']?.toString() ?? json['lastMessageAt']?.toString() ?? '',
+    ),
+    isOnline: json['is_online'] ?? json['isOnline'] ?? false,
   );
 }
 

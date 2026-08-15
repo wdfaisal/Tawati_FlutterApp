@@ -211,15 +211,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final contentWidth = (constraints.maxWidth - 64).clamp(0.0, 347.0).toDouble();
-              return Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: SizedBox(
-                    width: contentWidth,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
+              final viewInsets = MediaQuery.viewInsetsOf(context).bottom;
+              final fullHeight = constraints.maxHeight + viewInsets;
+              return SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: viewInsets),
+                  child: Center(
+                    child: SizedBox(
+                      height: fullHeight,
+                      width: constraints.maxWidth,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: SizedBox(
+                          width: contentWidth,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                         const SizedBox(height: 48),
                         Center(
                           child: Image.asset(
@@ -619,7 +627,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ),
-              );
+              ),
+            ),
+          ),
+        );
             },
           ),
         ),

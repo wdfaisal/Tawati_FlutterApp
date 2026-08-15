@@ -1,11 +1,20 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
 import 'package:tawati_mobile/src/features/groups/models/group.dart';
+
+const Color _kHeaderBorder = Color(0xFFE2E8F0);
+const Color _kSoftBg = Color(0xFFF1F5F8);
+const Color _kMuted = Color(0xFF9CAFB8);
+const Color _kSecondary = Color(0xFF62707B);
+const Color _kNameColor = Color(0xFF1A242B);
+const Color _kDivider = Color(0xFFF1F5F8);
+const Color _kOnlineGreen = Color(0xFF22C55E);
 
 class GroupsTab extends ConsumerStatefulWidget {
   const GroupsTab({super.key});
@@ -15,15 +24,28 @@ class GroupsTab extends ConsumerStatefulWidget {
 }
 
 class _GroupsTabState extends ConsumerState<GroupsTab> {
+  static const List<String> _tabs = ['المناسبات', 'الوفيات', 'الإعلانات', 'الدردشات'];
+
   List<Group> _allGroups = [];
   bool _loading = true;
   String? _error;
   final Set<String> _joiningGroupIds = <String>{};
 
+  int _tabIndex = 3;
+  bool _searchActive = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
   @override
   void initState() {
     super.initState();
     _loadGroups();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadGroups() async {
@@ -95,130 +117,202 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.surface,
-        appBar: AppBar(
-          title: const Text('القروبات'),
-          backgroundColor: Colors.white,
-          foregroundColor: AppColors.textPrimary,
-          elevation: 0,
-          scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            SafeArea(bottom: false, child: _buildHeader()),
+            Expanded(child: _buildTabContent()),
+          ],
         ),
-        body: _buildBody(),
+        floatingActionButton: _tabIndex == 3 && !_searchActive
+            ? FloatingActionButton(
+                onPressed: _showJoinSheet,
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 6,
+                highlightElevation: 0,
+                shape: const CircleBorder(),
+                child: const Icon(Icons.add_rounded, size: 26),
+              )
+            : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_loading) return _buildShimmer();
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: AppColors.textHint),
-            const SizedBox(height: 12),
-            const Text(
-              'حدث خطأ، يرجى المحاولة مرة أخرى',
-              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 12),
-            TextButton.icon(
-              onPressed: _loadGroups,
-              icon: const Icon(Icons.refresh),
-              label: const Text('إعادة المحاولة'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final myGroups = _allGroups.where((g) => g.isMember).toList();
-    final publicGroups = _allGroups.where((g) => !g.isMember).toList();
-
-    return RefreshIndicator(
-      onRefresh: _loadGroups,
-      color: AppColors.primary,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+  Widget _buildHeader() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: _kHeaderBorder)),
+      ),
+      child: Column(
         children: [
-          if (myGroups.isEmpty && publicGroups.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 80),
-              child: Column(
-                children: [
-                  Icon(Icons.group_outlined, size: 48, color: AppColors.textHint),
-                  SizedBox(height: 12),
-                  Text(
-                    'لا توجد قروبات',
-                    style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildSearchButton(),
+                SizedBox(
+                  width: 100,
+                  height: 40,
+                  child: Image.asset('assets/images/splash_logo.png', fit: BoxFit.contain),
+                ),
+              ],
             ),
-          if (myGroups.isNotEmpty) ...[
-            _buildSectionHeader('قروباتي'),
-            ...myGroups.map((g) => _buildGroupCard(g, joined: true)),
-          ],
-          if (publicGroups.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _buildSectionHeader('قروبات متاحة للانضمام'),
-            ...publicGroups.map((g) => _buildGroupCard(g, joined: false)),
-          ],
-          const SizedBox(height: 24),
+          ),
+          _buildTabBar(),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontFamily: 'IBMPlexSansArabic',
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textSecondary,
+  Widget _buildSearchButton() {
+    return Material(
+      color: _kSoftBg,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => setState(() {
+          if (_searchActive) {
+            _searchController.clear();
+            _query = '';
+          }
+          _searchActive = !_searchActive;
+        }),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Icon(_searchActive ? Icons.close_rounded : Icons.search_rounded, size: 19, color: AppColors.primary),
         ),
       ),
     );
   }
 
-  Widget _buildGroupCard(Group group, {required bool joined}) {
-    final isMutedLocally = ref.watch(localMutedGroupsProvider).contains(group.id);
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+  Widget _buildTabBar() {
+    return Row(
+      children: [
+        for (var i = 0; i < _tabs.length; i++)
+          Expanded(child: _buildTab(i)),
+      ],
+    );
+  }
+
+  Widget _buildTab(int index) {
+    final active = index == _tabIndex;
+    return InkWell(
+      onTap: () => setState(() => _tabIndex = index),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: active ? AppColors.primary : Colors.transparent, width: 2),
+          ),
+        ),
+        child: Text(
+          _tabs[index],
+          style: TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 14,
+            height: 1.25,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            color: active ? AppColors.primary : _kMuted,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabContent() {
+    if (_loading) return _buildShimmer();
+    if (_error != null) return _buildError();
+    if (_tabIndex != 3) return _buildEmptyTab(_tabIndex);
+
+    final chats = _allGroups.where((g) => g.isMember).toList();
+    final query = _query.trim();
+    final filtered = query.isEmpty
+        ? chats
+        : chats.where((g) => g.name.toLowerCase().contains(query.toLowerCase())).toList();
+
+    return Column(
+      children: [
+        if (_searchActive) _buildSearchField(),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadGroups,
+            color: AppColors.primary,
+            child: filtered.isEmpty
+                ? _buildNoChats(
+                    query.isEmpty ? 'لا توجد قروبات بعد، اضغط + للانضمام إلى قروب' : 'لا توجد نتائج مطابقة لبحثك')
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) => _buildChatTile(filtered[index]),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: TextField(
+        controller: _searchController,
+        autofocus: true,
+        onChanged: (value) => setState(() => _query = value),
+        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: _kNameColor),
+        decoration: InputDecoration(
+          hintText: 'ابحث في الدردشات...',
+          hintStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: _kMuted),
+          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: _kMuted),
+          suffixIcon: GestureDetector(
+            onTap: () => setState(() {
+              _searchActive = false;
+              _searchController.clear();
+              _query = '';
+            }),
+            child: const Icon(Icons.close_rounded, size: 18, color: _kMuted),
+          ),
+          filled: true,
+          fillColor: _kSoftBg,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatTile(Group group) {
+    final unread = group.unreadCount;
+    final preview = group.lastMessage?.isNotEmpty == true
+        ? group.lastMessage!
+        : group.description?.isNotEmpty == true
+            ? group.description!
+            : '${_toArabicDigits('${group.memberCount}')} عضو';
+
+    return Material(
+      color: Colors.white,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: joined
-            ? () {
-                context.pushNamed('groupChat', extra: {
-                  'groupId': group.id,
-                  'groupName': group.name,
-                });
-              }
-            : () => _joinGroup(group),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        onTap: () => _openChat(group.id, group.name),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: _kDivider))),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: AppColors.primaryLight,
-                child: Text(
-                  group.name.isNotEmpty ? group.name[0] : '?',
-                  style: const TextStyle(
-                    fontFamily: 'IBMPlexSansArabic',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
               Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -226,104 +320,54 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                         Expanded(
                           child: Text(
                             group.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontFamily: 'IBMPlexSansArabic',
-                              fontSize: 15,
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
+                              color: _kNameColor,
+                              height: 1.5,
                             ),
                           ),
                         ),
-                        if (joined && isMutedLocally)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 6),
-                            child: Icon(Icons.notifications_off_outlined, size: 15, color: AppColors.textHint),
+                        const SizedBox(width: 12),
+                        Text(
+                          _formatListTime(group.lastMessageAt ?? group.createdAt),
+                          style: TextStyle(
+                            fontFamily: 'IBMPlexSansArabic',
+                            fontSize: 11,
+                            height: 1.5,
+                            color: unread > 0 ? AppColors.primary : _kMuted,
                           ),
-                        if (joined && group.unreadCount > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              group.unreadCount > 99 ? '99+' : '${group.unreadCount}',
-                              style: const TextStyle(
-                                fontFamily: 'IBMPlexSansArabic',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.people_outline, size: 14, color: AppColors.textHint),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${group.memberCount} عضو',
-                          style: const TextStyle(
-                            fontFamily: 'IBMPlexSansArabic',
-                            fontSize: 12,
-                            color: AppColors.textHint,
+                        Expanded(
+                          child: Text(
+                            preview,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'IBMPlexSansArabic',
+                              fontSize: 13,
+                              height: 1.5,
+                              color: unread > 0 ? _kSecondary : _kMuted,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        if (group.type == 'announcement') ...[
-                          const Icon(Icons.campaign_outlined, size: 14, color: AppColors.textHint),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'إعلانات',
-                            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textHint),
-                          ),
-                        ],
+                        const SizedBox(width: 12),
+                        _buildChatTrailing(group),
                       ],
                     ),
-                    if (group.description != null && group.description!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        group.description!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'IBMPlexSansArabic',
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              if (joined)
-                const Icon(Icons.chevron_left, color: AppColors.textHint, size: 22)
-              else
-                _joiningGroupIds.contains(group.id)
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text(
-                          'انضمام',
-                          style: TextStyle(
-                            fontFamily: 'IBMPlexSansArabic',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
+              const SizedBox(width: 16),
+              _buildAvatar(group),
             ],
           ),
         ),
@@ -331,10 +375,356 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
     );
   }
 
-  Widget _buildShimmer() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: List.generate(5, (_) => skeletonListItem()),
+  Widget _buildChatTrailing(Group group) {
+    if (group.unreadCount > 0) {
+      return Container(
+        width: 20,
+        height: 20,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+        child: Text(
+          _toArabicDigits(group.unreadCount > 99 ? '99+' : '${group.unreadCount}'),
+          style: const TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            height: 1,
+          ),
+        ),
+      );
+    }
+    if (group.messageCount > 0) {
+      return const Icon(Icons.done_all_rounded, size: 13, color: _kMuted);
+    }
+    return const SizedBox(width: 20);
+  }
+
+  Widget _buildAvatar(Group group) {
+    final image = group.image;
+    final showOnline = group.isOnline ||
+        (group.lastMessageAt?.isAfter(DateTime.now().subtract(const Duration(minutes: 10))) ?? false);
+
+    return SizedBox(
+      width: 56,
+      height: 56,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            clipBehavior: Clip.antiAlias,
+            decoration: const BoxDecoration(color: _kSoftBg, shape: BoxShape.circle),
+            child: (image != null && image.isNotEmpty)
+                ? Image.network(
+                    image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => _initialsAvatar(group),
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null ? child : _initialsAvatar(group),
+                  )
+                : _initialsAvatar(group),
+          ),
+          if (showOnline)
+            Positioned(
+              bottom: 1,
+              right: 1,
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: _kOnlineGreen,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
+  }
+
+  Widget _initialsAvatar(Group group) {
+    return Center(
+      child: Text(
+        group.name.isNotEmpty ? group.name.trim()[0] : '؟',
+        style: const TextStyle(
+          fontFamily: 'IBMPlexSansArabic',
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoChats(String message) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 96, left: 24, right: 24),
+          child: Column(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(color: _kSoftBg, shape: BoxShape.circle),
+                child: const Icon(Icons.chat_bubble_outline_rounded, size: 30, color: _kMuted),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: _kSecondary),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyTab(int index) {
+    final (IconData icon, String title) = switch (index) {
+      0 => (Icons.event_available_outlined, 'لا توجد مناسبات حالياً'),
+      1 => (Icons.local_florist_outlined, 'لا توجد وفيات حالياً'),
+      _ => (Icons.campaign_outlined, 'لا توجد إعلانات حالياً'),
+    };
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: const BoxDecoration(color: _kSoftBg, shape: BoxShape.circle),
+            child: Icon(icon, size: 30, color: _kMuted),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              fontFamily: 'IBMPlexSansArabic',
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: _kNameColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'ستظهر المحتويات الجديدة هنا',
+            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 44, color: _kMuted),
+          const SizedBox(height: 14),
+          const Text(
+            'تعذر تحميل الدردشات',
+            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: _kSecondary),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: _loadGroups,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('إعادة المحاولة'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmer() {
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 6,
+      itemBuilder: (context, index) => Container(
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: _kDivider))),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      skeletonLine(width: 110, height: 14, margin: EdgeInsets.zero),
+                      const Spacer(),
+                      skeletonLine(width: 44, height: 10, margin: EdgeInsets.zero),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  skeletonLine(height: 12, margin: EdgeInsets.zero),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            skeletonCircle(size: 56),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showJoinSheet() {
+    final publics = _allGroups.where((g) => !g.isMember).toList();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: publics.isEmpty
+            ? Padding(
+                padding: const EdgeInsets.fromLTRB(24, 36, 24, 36),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: const BoxDecoration(color: _kSoftBg, shape: BoxShape.circle),
+                      child: const Icon(Icons.group_add_outlined, size: 28, color: _kMuted),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'لا توجد قروبات متاحة للانضمام حالياً',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: _kSecondary),
+                    ),
+                  ],
+                ),
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 18, 24, 8),
+                    child: Text(
+                      'قروبات متاحة للانضمام',
+                      style: const TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: _kNameColor,
+                      ),
+                    ),
+                  ),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: publics.length,
+                      itemBuilder: (context, index) => _buildJoinRow(publics[index]),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildJoinRow(Group group) {
+    final joining = _joiningGroupIds.contains(group.id);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+      child: Row(
+        children: [
+          _buildAvatar(group),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  group.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: _kNameColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_toArabicDigits('${group.memberCount}')} عضو',
+                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          if (joining)
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+            )
+          else
+            GestureDetector(
+              onTap: () => _joinFromSheet(group),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'انضمام',
+                  style: TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _joinFromSheet(Group group) {
+    Navigator.of(context).pop();
+    _joinGroup(group);
+  }
+
+  String _formatListTime(DateTime dateTime) {
+    final local = dateTime.toLocal();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(local.year, local.month, local.day);
+    final diff = today.difference(day).inDays;
+
+    if (diff == 0) {
+      final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+      final minute = local.minute.toString().padLeft(2, '0');
+      return '${_toArabicDigits('$hour:$minute')} ${local.hour < 12 ? 'ص' : 'م'}';
+    }
+    if (diff == 1) return 'أمس';
+    return _toArabicDigits(DateFormat('dd/MM/yyyy').format(local));
+  }
+
+  String _toArabicDigits(String input) {
+    const digits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    final buffer = StringBuffer();
+    for (final char in input.split('')) {
+      final code = char.codeUnitAt(0) - 0x30;
+      buffer.write(code >= 0 && code <= 9 ? digits[code] : char);
+    }
+    return buffer.toString();
   }
 }
