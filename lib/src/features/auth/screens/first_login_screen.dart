@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:tawati_mobile/src/core/country_codes.dart';
 import 'package:tawati_mobile/src/core/error_handler.dart';
-import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 
@@ -25,9 +24,8 @@ class _FirstLoginScreenState extends ConsumerState<FirstLoginScreen> {
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
 
-  CountryCode _selectedCountry = allCountryCodes.first;
+  final CountryCode _selectedCountry = allCountryCodes.first;
   bool _otpSent = false;
-  bool _pinSet = false;
   bool _isLoading = false;
   bool _obscurePin = true;
   bool _obscureConfirm = true;
@@ -109,11 +107,12 @@ class _FirstLoginScreenState extends ConsumerState<FirstLoginScreen> {
       if (!mounted) return;
       final needsSetup = result['needs_family_setup'] == true;
       final userId = result['user_id'];
+      final name = ref.read(authProvider).user?.fullNameAr ?? '';
       setState(() => _isLoading = false);
       if (needsSetup && userId != null) {
         context.goNamed('familySetup', extra: {'userId': userId});
       } else {
-        context.goNamed('home');
+        context.goNamed('welcome', extra: {'name': name});
       }
     } catch (e) {
       if (!mounted) return;
@@ -234,7 +233,7 @@ class _FirstLoginScreenState extends ConsumerState<FirstLoginScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
+                        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
@@ -379,7 +378,7 @@ class _FirstLoginScreenState extends ConsumerState<FirstLoginScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
+                        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),

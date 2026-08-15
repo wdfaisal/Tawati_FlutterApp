@@ -617,33 +617,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 24),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'ليس لديك حساب؟ ',
+                              const SizedBox(height: 20),
+                              const Divider(color: AppColors.border),
+                              const SizedBox(height: 16),
+                              Material(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: () => context.pushNamed('register'),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: AppColors.border),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.primaryLight,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.person_add_alt_1, color: AppColors.primary, size: 20),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Expanded(
+                                          child: Text(
+                                            'ليس لديك حساب؟ قدّم طلب انضمام',
+                                            style: TextStyle(
+                                              fontFamily: 'IBMPlexSansArabic',
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: _kLabelColor,
+                                            ),
+                                          ),
+                                        ),
+                                        const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 16),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Center(
+                                child: GestureDetector(
+                                  onTap: () => context.pushNamed('register', extra: {'join': true}),
+                                  child: const Text(
+                                    'أحد أفراد عائلتك يدعوك؟ انضم لعائلتك',
                                     style: TextStyle(
                                       fontFamily: 'IBMPlexSansArabic',
-                                      fontSize: 14,
-                                      color: _kSubtitleColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
                                     ),
                                   ),
-                                  GestureDetector(
-                                    onTap: () => context.pushNamed('register'),
-                                    child: const Text(
-                                      'سجل الآن',
-                                      style: TextStyle(
-                                        fontFamily: 'IBMPlexSansArabic',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                              const SizedBox(height: 40),
+                              const SizedBox(height: 24),
                             ],
                           ),
                         ),

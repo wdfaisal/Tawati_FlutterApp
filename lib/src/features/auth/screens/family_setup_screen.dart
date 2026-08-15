@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:tawati_mobile/src/core/error_handler.dart';
-import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 
@@ -58,7 +57,8 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
       ));
-      context.goNamed('home');
+      final name = ref.read(authProvider).user?.fullNameAr ?? '';
+      context.goNamed('welcome', extra: {'name': name});
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -203,7 +203,7 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.card,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border.withOpacity(0.6)),
+                        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,7 +301,7 @@ class _FamilySetupScreenState extends ConsumerState<FamilySetupScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
+                      disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),

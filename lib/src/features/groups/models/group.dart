@@ -46,6 +46,8 @@
     int? unreadCount,
     String? myPermission,
     String? myMemberStatus,
+    String? lastMessage,
+    DateTime? lastMessageAt,
   }) => Group(
     id: id,
     name: name,
@@ -61,6 +63,8 @@
     myPermission: myPermission ?? this.myPermission,
     myMemberStatus: myMemberStatus ?? this.myMemberStatus,
     createdAt: createdAt,
+    lastMessage: lastMessage ?? this.lastMessage,
+    lastMessageAt: lastMessageAt ?? this.lastMessageAt,
   );
 
   factory Group.fromJson(Map<String, dynamic> json) => Group(
@@ -205,4 +209,6 @@ class GroupMessage {
       reactions: _parseReactions(json['reactions']),
     );
   }
+
+  bool get isImage => type == 'image' || type == 'photo';
 }

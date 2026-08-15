@@ -1,7 +1,10 @@
-﻿import 'dart:io';
+﻿import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -13,25 +16,17 @@ import 'package:tawati_mobile/src/features/surveys/models/survey_template.dart';
 import 'package:tawati_mobile/src/features/surveys/widgets/dynamic_form.dart';
 
 class ChildData {
-  String firstName;
-  String fatherName;
-  String grandName;
-  String familyName;
+  String fullName;
   String gender;
   int? age;
   String? nationalId;
 
   ChildData({
-    this.firstName = '',
-    this.fatherName = '',
-    this.grandName = '',
-    this.familyName = '',
+    this.fullName = '',
     this.gender = 'male',
     this.age,
     this.nationalId,
   });
-
-  String get fullName => '$firstName $fatherName $grandName $familyName';
 }
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -43,6 +38,10 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  static const _newFamilyDraftKey = 'registration_draft_v1';
+  static const _joinFlowDraftKey = 'registration_join_draft_v1';
+  static const _storage = FlutterSecureStorage();
+
   final _pageController = PageController();
   int _currentStep = 0;
   bool _isLoading = false;
@@ -54,9 +53,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   CountryCode _selectedCountry = allCountryCodes.first;
   final _fullNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _familyHeadPhoneCtrl = TextEditingController();
   final _nationalIdCtrl = TextEditingController();
   DateTime? _selectedDate;
   String _gender = 'male';
+
+  String? _nameError;
+  String? _phoneError;
 
   String _maritalStatus = 'single';
   final _spouseNameCtrl = TextEditingController();
@@ -71,28 +74,110 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
 
+  Timer? _draftDebounce;
+  bool _hasDraft = false;
+  bool _showResumeBanner = false;
+
   bool get _hasMin8Chars => _passwordCtrl.text.length >= 8;
   bool get _hasLetters => _passwordCtrl.text.contains(RegExp(r'[a-zA-Z\u0621-\u064A]'));
   bool get _hasNumbers => _passwordCtrl.text.contains(RegExp(r'[0-9]'));
   bool get _passwordsMatch => _passwordCtrl.text.isNotEmpty && _passwordCtrl.text == _confirmPasswordCtrl.text;
   bool get _passwordValid => _hasMin8Chars && _hasLetters && _hasNumbers && _passwordsMatch;
+  bool get _joinPasswordValid => _hasMin8Chars && _hasLetters && _hasNumbers;
 
-  int get _totalSteps {
-    int count = 5;
-    if (_surveyTemplate != null) count++;
-    return count;
+  int get _totalSteps => _isJoinFlow ? 3 : (_surveyTemplate != null ? 6 : 5);
+
+  List<String> get _stepLabels {
+    if (_isJoinFlow) return ['بياناتك', 'ربّ أسرتك', 'مراجعة وإرسال'];
+    final labels = ['بياناتك', 'حالتك العائلية', 'أبناؤك', 'حماية حسابك', 'مراجعة وإرسال'];
+    if (_surveyTemplate != null) labels.insert(3, 'الاستبيان');
+    return labels;
+  }
+
+  ({IconData icon, String title, String caption}) _stepHeaderFor(int index) {
+    if (_isJoinFlow) {
+      return switch (index) {
+        0 => (
+            icon: Icons.person_rounded,
+            title: 'بياناتك',
+            caption: 'أهلاً بك في عائلتك — أدخل بياناتك لتُعتمد بناءً عليها.',
+          ),
+        1 => (
+            icon: Icons.family_restroom_rounded,
+            title: 'ربّ أسرتك',
+            caption: 'أدخل رقم جوال ربّ أسرتك المسجّل لدينا — سيُعتمد طلبك بناءً عليه.',
+          ),
+        _ => (
+            icon: Icons.fact_check_rounded,
+            title: 'مراجعة وإرسال',
+            caption: 'تأكد من بياناتك ثم أرسل طلب انضمامك.',
+          ),
+      };
+    }
+    return switch (index) {
+      0 => (
+          icon: Icons.person_rounded,
+          title: 'مَن أنت؟',
+          caption: 'بياناتك تُربط رسميًا بشجرة عائلتك بعد الموافقة.',
+        ),
+      1 => (
+          icon: Icons.family_restroom_rounded,
+          title: 'حالتك العائلية',
+          caption: 'اختر حالتك، وستظهر الحقول المطلوبة تلقائيًا.',
+        ),
+      2 => (
+          icon: Icons.child_care_rounded,
+          title: 'أبناؤك',
+          caption: 'أضف أبناءك — كل ابن في بطاقة قابلة للطي.',
+        ),
+      3 => _surveyTemplate != null
+          ? (
+              icon: Icons.quiz_rounded,
+              title: 'الاستبيان',
+              caption: 'أجب على الأسئلة التالية.',
+            )
+          : (
+              icon: Icons.lock_rounded,
+              title: 'حماية حسابك',
+              caption: 'اختر كلمة مرور قوية لحماية حسابك.',
+            ),
+      4 => _surveyTemplate != null
+          ? (
+              icon: Icons.lock_rounded,
+              title: 'حماية حسابك',
+              caption: 'اختر كلمة مرور قوية لحماية حسابك.',
+            )
+          : (
+              icon: Icons.fact_check_rounded,
+              title: 'مراجعة وإرسال',
+              caption: 'تأكد من بياناتك ثم أرسل طلب انضمامك.',
+            ),
+      _ => (
+          icon: Icons.fact_check_rounded,
+          title: 'مراجعة وإرسال',
+          caption: 'تأكد من بياناتك ثم أرسل طلب انضمامك.',
+        ),
+    };
   }
 
   @override
   void initState() {
     super.initState();
     _isJoinFlow = widget.showJoinOnly;
+    _fullNameCtrl.addListener(_scheduleDraftSave);
+    _phoneCtrl.addListener(_scheduleDraftSave);
+    _familyHeadPhoneCtrl.addListener(_scheduleDraftSave);
+    _nationalIdCtrl.addListener(_scheduleDraftSave);
+    _spouseNameCtrl.addListener(_scheduleDraftSave);
+    _passwordCtrl.addListener(_scheduleDraftSave);
+    _confirmPasswordCtrl.addListener(_scheduleDraftSave);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final extra = GoRouterState.of(context).extra;
       if (extra is Map && extra['join'] == true) {
         setState(() => _isJoinFlow = true);
       }
+      _restoreDraft();
       if (!_isJoinFlow) _loadSurvey();
     });
   }
@@ -111,11 +196,129 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
+  String get _draftKey => _isJoinFlow ? _joinFlowDraftKey : _newFamilyDraftKey;
+
+  Map<String, dynamic> _draftData() => {
+        'fullName': _fullNameCtrl.text,
+        'phone': _phoneCtrl.text,
+        'familyHeadPhone': _familyHeadPhoneCtrl.text,
+        'nationalId': _nationalIdCtrl.text,
+        'gender': _gender,
+        'birth': _selectedDate?.toIso8601String(),
+        'maritalStatus': _maritalStatus,
+        'spouseName': _spouseNameCtrl.text,
+        'hasChildren': _hasChildren,
+        'childCount': _childCount,
+        'children': _children
+            .map((c) => {
+                  'fullName': c.fullName,
+                  'gender': c.gender,
+                  'age': c.age,
+                  'nationalId': c.nationalId,
+                })
+            .toList(),
+        'password': _passwordCtrl.text,
+        'confirmPassword': _confirmPasswordCtrl.text,
+        'countryCode': _selectedCountry.code,
+        'profileImagePath': _profileImagePath,
+      };
+
+  void _scheduleDraftSave() {
+    _draftDebounce?.cancel();
+    _draftDebounce = Timer(const Duration(milliseconds: 500), () {
+      unawaited(_saveDraft());
+    });
+  }
+
+  Future<void> _saveDraft() async {
+    try {
+      await _storage.write(key: _draftKey, value: jsonEncode(_draftData()));
+    } catch (e) {
+      debugPrint('_saveDraft failed: $e');
+    }
+  }
+
+  Future<void> _restoreDraft() async {
+    try {
+      final raw = await _storage.read(key: _draftKey);
+      if (raw == null) return;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _fullNameCtrl.text = data['fullName'] as String? ?? '';
+        _phoneCtrl.text = data['phone'] as String? ?? '';
+        _familyHeadPhoneCtrl.text = data['familyHeadPhone'] as String? ?? '';
+        _nationalIdCtrl.text = data['nationalId'] as String? ?? '';
+        _gender = data['gender'] as String? ?? 'male';
+        _maritalStatus = data['maritalStatus'] as String? ?? 'single';
+        _spouseNameCtrl.text = data['spouseName'] as String? ?? '';
+        _hasChildren = data['hasChildren'] as bool? ?? false;
+        _childCount = data['childCount'] as int? ?? 0;
+        _passwordCtrl.text = data['password'] as String? ?? '';
+        _confirmPasswordCtrl.text = data['confirmPassword'] as String? ?? '';
+        _profileImagePath = data['profileImagePath'] as String?;
+        final code = data['countryCode'] as String?;
+        if (code != null) {
+          _selectedCountry = allCountryCodes.firstWhere(
+            (c) => c.code == code,
+            orElse: () => allCountryCodes.first,
+          );
+        }
+        final birth = data['birth'] as String?;
+        if (birth != null) _selectedDate = DateTime.tryParse(birth);
+        _children.clear();
+        for (final item in (data['children'] as List? ?? const [])) {
+          final m = item as Map<String, dynamic>;
+          _children.add(ChildData(
+            fullName: m['fullName'] as String? ?? '',
+            gender: m['gender'] as String? ?? 'male',
+            age: m['age'] as int?,
+            nationalId: m['nationalId'] as String?,
+          ));
+        }
+        _hasDraft = true;
+        _showResumeBanner = true;
+      });
+    } catch (e) {
+      debugPrint('_restoreDraft failed: $e');
+    }
+  }
+
+  Future<void> _clearDraft() async {
+    _draftDebounce?.cancel();
+    await _storage.delete(key: _draftKey);
+  }
+
+  void _resetDraft() {
+    setState(() {
+      _hasDraft = false;
+      _showResumeBanner = false;
+      _fullNameCtrl.clear();
+      _phoneCtrl.clear();
+      _familyHeadPhoneCtrl.clear();
+      _nationalIdCtrl.clear();
+      _spouseNameCtrl.clear();
+      _passwordCtrl.clear();
+      _confirmPasswordCtrl.clear();
+      _gender = 'male';
+      _maritalStatus = 'single';
+      _hasChildren = false;
+      _childCount = 0;
+      _children.clear();
+      _selectedDate = null;
+      _profileImagePath = null;
+    });
+    unawaited(_clearDraft());
+  }
+
   @override
   void dispose() {
+    _draftDebounce?.cancel();
+    unawaited(_saveDraft());
     _pageController.dispose();
     _fullNameCtrl.dispose();
     _phoneCtrl.dispose();
+    _familyHeadPhoneCtrl.dispose();
     _nationalIdCtrl.dispose();
     _spouseNameCtrl.dispose();
     _passwordCtrl.dispose();
@@ -126,42 +329,53 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void _next() {
     if (!_validateCurrentStep()) return;
     if (_currentStep < _totalSteps - 1) {
-      _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      _scheduleDraftSave();
+      _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
     }
   }
 
   void _prev() {
     if (_currentStep > 0) {
-      _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      _scheduleDraftSave();
+      _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
     }
   }
 
   bool _validateCurrentStep() {
-    final hasSurvey = _surveyTemplate != null;
-    // Personal data (always index 0)
     if (_currentStep == 0) {
-      if (_fullNameCtrl.text.trim().isEmpty || _fullNameCtrl.text.trim().split(' ').length < 4) {
-        _showError('أدخل الاسم الرباعي كاملاً (الاسم - الأب - الجد - العائلة)');
-        return false;
-      }
-      if (_phoneCtrl.text.trim().isEmpty || _phoneCtrl.text.trim().length < 6) {
-        _showError('أدخل رقم جوال صحيح');
+      final nameWords = _fullNameCtrl.text.trim().split(' ').where((w) => w.isNotEmpty).length;
+      final phoneOk = _phoneCtrl.text.trim().length >= 6;
+      final nameOk = nameWords >= 4;
+      setState(() {
+        _nameError = nameOk ? null : 'أدخل الاسم الرباعي كاملاً (الاسم - الأب - الجد - العائلة)';
+        _phoneError = phoneOk ? null : 'أدخل رقم جوال صحيح';
+      });
+      if (!nameOk || !phoneOk) return false;
+      if (_isJoinFlow && !_joinPasswordValid) {
+        _showError('تأكد من استيفاء جميع شروط كلمة المرور');
         return false;
       }
       return true;
     }
-    // Marital status (always index 1)
+    if (_isJoinFlow) {
+      if (_currentStep == 1) {
+        if (_familyHeadPhoneCtrl.text.trim().length < 6) {
+          _showError('أدخل رقم جوال رب الأسرة صحيح');
+          return false;
+        }
+      }
+      return true;
+    }
     if (_currentStep == 1) {
       if (_maritalStatus == 'married' || _maritalStatus == 'widowed') {
-        if (_spouseNameCtrl.text.trim().isEmpty || _spouseNameCtrl.text.trim().split(' ').length < 4) {
+        if (_spouseNameCtrl.text.trim().split(' ').where((w) => w.isNotEmpty).length < 4) {
           _showError('أدخل اسم الزوج/الزوجة رباعياً');
           return false;
         }
       }
       return true;
     }
-    // Password step (index 3 without survey, index 4 with survey)
-    final passwordIdx = hasSurvey ? 4 : 3;
+    final passwordIdx = _surveyTemplate != null ? 4 : 3;
     if (_currentStep == passwordIdx) {
       if (!_passwordValid) {
         _showError('تأكد من استيفاء جميع شروط كلمة المرور');
@@ -177,6 +391,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       content: Text(msg, style: const TextStyle(fontFamily: 'IBMPlexSansArabic')),
       backgroundColor: AppColors.error,
       behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
 
@@ -189,7 +404,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ? _spouseNameCtrl.text.trim()
           : null;
 
-      await api.post('/registration-requests', data: {
+      final res = await api.post('/registration-requests', data: {
         'type': 'new_family',
         'fullNameAr': fullName,
         'phone': normalizePhone(_phoneCtrl.text),
@@ -202,19 +417,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         'hasChildren': _hasChildren,
         'childCount': _childCount,
         'children': _children.map((c) => {
-          'fullName': c.fullName,
+          'fullName': c.fullName.trim(),
           'gender': c.gender,
           'age': c.age,
           'nationalId': c.nationalId?.trim().isEmpty == true ? null : c.nationalId?.trim(),
         }).toList(),
         'surveyAnswers': _surveyAnswers,
       });
-      if (mounted) _showSuccessDialog();
+      await _clearDraft();
+      if (mounted) _openPendingReview(res);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(friendlyError(e), style: const TextStyle(fontFamily: 'IBMPlexSansArabic')),
           backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
       }
     } finally {
@@ -229,19 +447,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     try {
       final api = ref.read(apiClientProvider);
       final fullName = _fullNameCtrl.text.trim();
-      await api.post('/registration-requests', data: {
+      final res = await api.post('/registration-requests', data: {
         'type': 'join_family',
-        'familyHeadPhone': normalizePhone(_phoneCtrl.text),
+        'familyHeadPhone': normalizePhone(_familyHeadPhoneCtrl.text),
         'fullNameAr': fullName,
         'phone': normalizePhone(_phoneCtrl.text),
         'password': _passwordCtrl.text,
       });
-      if (mounted) _showSuccessDialog();
+      await _clearDraft();
+      if (mounted) _openPendingReview(res);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(friendlyError(e), style: const TextStyle(fontFamily: 'IBMPlexSansArabic')),
           backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
       }
     } finally {
@@ -249,42 +470,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64, height: 64,
-              decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
-              child: const Icon(Icons.check, color: Colors.white, size: 36),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'تم إرسال طلبك بنجاح، سيتم مراجعته من قبل المشرف',
-              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity, height: 48,
-              child: ElevatedButton(
-                onPressed: () => context.goNamed('login'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary, foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('تسجيل الدخول', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _openPendingReview(dynamic response) {
+    final data = response?.data;
+    final record = data is Map ? data['data'] : null;
+    final id = record is Map ? record['_id']?.toString() ?? '' : '';
+    String requestId;
+    if (id.isNotEmpty) {
+      requestId = '#TWT-${id.length > 5 ? id.substring(id.length - 5) : id}'.toUpperCase();
+    } else {
+      requestId = '#TWT-${(_phoneCtrl.text.hashCode.abs() % 10000).toString().padLeft(4, '0')}';
+    }
+    context.pushNamed('pendingReview', extra: {'requestId': requestId});
   }
 
   @override
@@ -292,11 +488,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         appBar: AppBar(
           title: Text(
             _isJoinFlow ? 'انضمام لعائلة' : 'طلب انضمام',
-            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontWeight: FontWeight.bold),
+            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontWeight: FontWeight.w600),
           ),
           centerTitle: true,
           backgroundColor: Colors.white,
@@ -305,7 +501,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, size: 20),
             onPressed: () {
-              if (_currentStep > 0 && !_isJoinFlow) {
+              if (_currentStep > 0) {
                 _prev();
               } else {
                 context.pop();
@@ -313,17 +509,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             },
           ),
         ),
-        body: _isJoinFlow ? _buildJoinFamilyForm() : _buildOnboardingFlow(),
+        body: _buildFlow(),
       ),
     );
   }
 
-  // ─── ONBOARDING FLOW ────────────────────────────────────────────────
+  // ─── FLOW SHELL ─────────────────────────────────────────────────────
 
-  Widget _buildOnboardingFlow() {
+  Widget _buildFlow() {
     return Column(
       children: [
-        _buildStepIndicator(),
+        _buildProgressBar(),
+        _buildResumeBanner(),
         Expanded(
           child: PageView(
             controller: _pageController,
@@ -337,7 +534,92 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
+  Widget _buildProgressBar() {
+    final label = _stepLabels[_currentStep];
+    final progress = (_currentStep + 1) / _totalSteps;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'الخطوة ${_currentStep + 1} من $_totalSteps · $label',
+            style: const TextStyle(
+              fontFamily: 'IBMPlexSansArabic',
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: Stack(
+              children: [
+                Container(height: 4, color: AppColors.border),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: progress),
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOutCubic,
+                  builder: (_, value, _) => FractionallySizedBox(
+                    widthFactor: value,
+                    child: Container(height: 4, color: AppColors.primary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResumeBanner() {
+    if (!_hasDraft || !_showResumeBanner) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.history_rounded, color: AppColors.primary, size: 18),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'وجدنا طلبًا سابقًا غير مكتمل — تم استئناف بياناتك',
+              style: TextStyle(
+                fontFamily: 'IBMPlexSansArabic',
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _resetDraft,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              visualDensity: VisualDensity.compact,
+              textStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            child: const Text('مسح'),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _buildSteps() {
+    if (_isJoinFlow) {
+      return [
+        _buildJoinPersonalStep(),
+        _buildJoinFamilyHeadStep(),
+        _buildJoinReviewStep(),
+      ];
+    }
     final steps = <Widget>[
       _buildPersonalInfoStep(),
       _buildMaritalStatusStep(),
@@ -351,77 +633,39 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return steps;
   }
 
-  List<String> get _stepLabels {
-    final labels = ['البيانات الشخصية', 'الحالة الاجتماعية', 'الأبناء', 'كلمة المرور', 'المراجعة'];
-    if (_surveyTemplate != null) {
-      labels.insert(3, 'الاستبيان');
-    }
-    return labels;
-  }
-
-  Widget _buildStepIndicator() {
-    final labels = _stepLabels;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      color: Colors.white,
-      child: Row(
-        children: List.generate(labels.length, (i) {
-          final isActive = i == _currentStep;
-          final isDone = i < _currentStep;
-          return Expanded(
-            child: Row(
-              children: [
-                if (i > 0)
-                  Expanded(
-                    child: Container(
-                      height: 2,
-                      color: isDone || isActive ? AppColors.primary : AppColors.border,
-                    ),
-                  ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 32, height: 32,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDone ? AppColors.primary : (isActive ? Colors.white : AppColors.surface),
-                        border: Border.all(
-                          color: isDone ? AppColors.primary : (isActive ? AppColors.primary : AppColors.border),
-                          width: 2,
-                        ),
-                      ),
-                      child: Center(
-                        child: isDone
-                            ? const Icon(Icons.check, color: Colors.white, size: 16)
-                            : Text(
-                                '${i + 1}',
-                                style: TextStyle(
-                                  fontFamily: 'IBMPlexSansArabic',
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isActive ? AppColors.primary : AppColors.textHint,
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      labels[i],
-                      style: TextStyle(
-                        fontFamily: 'IBMPlexSansArabic',
-                        fontSize: 9,
-                        color: isActive ? AppColors.primary : AppColors.textHint,
-                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        }),
-      ),
+  Widget _buildStepHeader(int index) {
+    final h = _stepHeaderFor(index);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(color: AppColors.primaryLight, shape: BoxShape.circle),
+          child: Icon(h.icon, color: AppColors.primary, size: 28),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          h.title,
+          style: const TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          h.caption,
+          style: const TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 14,
+            color: AppColors.textSecondary,
+            height: 1.6,
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
     );
   }
 
@@ -430,6 +674,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     IconData? icon,
     Widget? prefix,
     Widget? suffix,
+    String? errorText,
   }) {
     return InputDecoration(
       hintText: hint,
@@ -437,13 +682,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       prefixIcon: icon != null ? Icon(icon, color: AppColors.textHint, size: 20) : null,
       prefix: prefix,
       suffixIcon: suffix,
+      errorText: errorText,
       filled: true,
       fillColor: AppColors.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.error)),
+      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.error, width: 2)),
     );
   }
 
@@ -454,14 +701,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  // ─── STEP 0: PERSONAL INFO ──────────────────────────────────────────
+  // ─── STEP 0 (NEW): PERSONAL INFO ───────────────────────────────────
 
   Widget _buildPersonalInfoStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildStepHeader(0),
           _buildProfileImagePicker(),
           const SizedBox(height: 24),
           _buildLabel('الاسم الرباعي *'),
@@ -469,7 +717,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           TextFormField(
             controller: _fullNameCtrl,
             style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-            decoration: _inputDecoration(hint: 'الاسم - الأب - الجد - العائلة'),
+            decoration: _inputDecoration(hint: 'الاسم - الأب - الجد - العائلة', errorText: _nameError),
+            onChanged: (_) {
+              if (_nameError != null) setState(() => _nameError = null);
+            },
           ),
           const SizedBox(height: 20),
           _buildLabel('رقم الجوال *'),
@@ -487,7 +738,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             decoration: _inputDecoration(hint: 'رقم الهوية (اختياري)', icon: Icons.badge_outlined),
           ),
           const SizedBox(height: 16),
-          _buildLabel('العمر'),
+          _buildLabel('تاريخ الميلاد'),
           const SizedBox(height: 6),
           _buildAgePicker(),
           const SizedBox(height: 16),
@@ -503,7 +754,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return GestureDetector(
       onTap: () async {
         final file = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512);
-        if (file != null) setState(() => _profileImagePath = file.path);
+        if (file != null) {
+          setState(() => _profileImagePath = file.path);
+          _scheduleDraftSave();
+        }
       },
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -523,7 +777,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 : null,
           ),
           const SizedBox(width: 12),
-          const Text('ارفع الصوره الشخصيه', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w600)),
+          const Text('ارفع الصورة الشخصية', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -531,6 +785,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Widget _buildPhoneField() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildCountryCodeSelector(),
         const SizedBox(width: 10),
@@ -541,7 +796,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             textDirection: TextDirection.ltr,
             textAlign: TextAlign.left,
             style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-            decoration: _inputDecoration(hint: '912345678'),
+            decoration: _inputDecoration(hint: '912345678', errorText: _phoneError),
+            onChanged: (_) {
+              if (_phoneError != null) setState(() => _phoneError = null);
+            },
           ),
         ),
       ],
@@ -555,7 +813,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.border),
         ),
         child: Row(
@@ -594,7 +852,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 controller: scrollController,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: allCountryCodes.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (_, i) {
                   final c = allCountryCodes[i];
                   final selected = c.code == _selectedCountry.code;
@@ -602,10 +860,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     dense: true,
                     leading: Text(c.dialCode, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
                     title: Text(c.name, style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: selected ? FontWeight.bold : FontWeight.normal, color: AppColors.textPrimary)),
-                    trailing: Text(c.dialCode, style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary)),
+                    trailing: selected ? const Icon(Icons.check, color: AppColors.primary, size: 20) : null,
                     selected: selected,
                     onTap: () {
                       setState(() => _selectedCountry = c);
+                      _scheduleDraftSave();
                       Navigator.pop(ctx);
                     },
                   );
@@ -632,14 +891,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           confirmText: 'تأكيد',
           fieldLabelText: 'التاريخ',
         );
-        if (picked != null) setState(() => _selectedDate = picked);
+        if (picked != null) {
+          setState(() => _selectedDate = picked);
+          _scheduleDraftSave();
+        }
       },
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.border),
         ),
         child: Row(
@@ -672,7 +934,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           final selected = _gender == val;
           return Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _gender = val),
+              onTap: () {
+                setState(() => _gender = val);
+                _scheduleDraftSave();
+              },
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
@@ -697,43 +962,60 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  // ─── STEP 1: MARITAL STATUS ─────────────────────────────────────────
+  // ─── STEP 1 (NEW): MARITAL STATUS ──────────────────────────────────
 
   Widget _buildMaritalStatusStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildLabel('الحالة الاجتماعية'),
-          const SizedBox(height: 8),
+          _buildStepHeader(1),
           _buildMaritalOption('single', 'أعزب'),
           _buildMaritalOption('married', 'متزوج'),
           _buildMaritalOption('divorced', 'مطلق'),
           _buildMaritalOption('widowed', 'أرمل'),
-          if (_maritalStatus == 'married' || _maritalStatus == 'widowed') ...[
-            const SizedBox(height: 24),
-            Text(
-              _maritalStatus == 'married' ? 'اسم الزوجة (رباعي) *' : 'اسم الزوج (رباعي) *',
-              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _spouseNameCtrl,
-              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-              decoration: _inputDecoration(hint: 'الاسم - الأب - الجد - العائلة'),
-            ),
-          ],
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: (_maritalStatus == 'married' || _maritalStatus == 'widowed')
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      Text(
+                        _maritalStatus == 'married' ? 'اسم الزوجة (رباعي) *' : 'اسم الزوج (رباعي) *',
+                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _spouseNameCtrl,
+                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
+                        decoration: _inputDecoration(hint: 'الاسم - الأب - الجد - العائلة'),
+                      ),
+                    ],
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
           const SizedBox(height: 24),
           _buildLabel('هل لديك أبناء؟'),
           const SizedBox(height: 8),
           _buildYesNoToggle(),
-          if (_hasChildren) ...[
-            const SizedBox(height: 16),
-            _buildLabel('عدد الأبناء'),
-            const SizedBox(height: 8),
-            _buildChildCountSelector(),
-          ],
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: _hasChildren
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildLabel('عدد الأبناء'),
+                      const SizedBox(height: 8),
+                      _buildChildCountSelector(),
+                    ],
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
         ],
       ),
     );
@@ -744,8 +1026,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: GestureDetector(
-        onTap: () => setState(() => _maritalStatus = value),
-        child: Container(
+        onTap: () {
+          setState(() => _maritalStatus = value);
+          _scheduleDraftSave();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: selected ? AppColors.primaryLight : AppColors.card,
@@ -775,7 +1062,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() { _hasChildren = true; _childCount = 1; _updateChildCount(1); }),
+              onTap: () {
+                setState(() { _hasChildren = true; _childCount = 1; _updateChildCount(1); });
+                _scheduleDraftSave();
+              },
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
@@ -790,7 +1080,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() { _hasChildren = false; _childCount = 0; _children.clear(); }),
+              onTap: () {
+                setState(() { _hasChildren = false; _childCount = 0; _children.clear(); });
+                _scheduleDraftSave();
+              },
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
@@ -812,7 +1105,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Row(
       children: [
         IconButton(
-          onPressed: _childCount > 1 ? () => setState(() { _childCount--; _updateChildCount(_childCount); }) : null,
+          onPressed: _childCount > 1 ? () {
+            setState(() { _childCount--; _updateChildCount(_childCount); });
+            _scheduleDraftSave();
+          } : null,
           icon: Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(shape: BoxShape.circle,
@@ -826,7 +1122,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
         ),
         IconButton(
-          onPressed: () => setState(() { _childCount++; _updateChildCount(_childCount); }),
+          onPressed: () {
+            setState(() { _childCount++; _updateChildCount(_childCount); });
+            _scheduleDraftSave();
+          },
           icon: Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.primary),
@@ -850,210 +1149,74 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
   }
 
-  // ─── STEP 2: CHILDREN ───────────────────────────────────────────────
+  // ─── STEP 2 (NEW): CHILDREN ────────────────────────────────────────
 
   Widget _buildChildrenStep() {
     if (!_hasChildren || _children.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.child_care_outlined, size: 64, color: AppColors.textHint),
+            _buildStepHeader(2),
+            const SizedBox(height: 40),
+            const Center(
+              child: Icon(Icons.child_care_outlined, size: 64, color: AppColors.textHint),
+            ),
             const SizedBox(height: 16),
-            Text('لا يوجد أبناء لإضافتهم', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, color: AppColors.textSecondary)),
+            const Center(
+              child: Text('لا يوجد أبناء بعد', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, color: AppColors.textSecondary)),
+            ),
             const SizedBox(height: 8),
-            Text('يمكنك تخطي هذه الخطوة', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textHint)),
+            const Center(
+              child: Text('يمكنك إضافتهم لاحقاً', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textHint)),
+            ),
           ],
         ),
       );
     }
     return ListView(
-      padding: const EdgeInsets.all(20),
-      children: List.generate(_children.length, (i) => _buildChildCard(i)),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      children: [
+        _buildStepHeader(2),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () {
+              setState(() { _childCount++; _updateChildCount(_childCount); });
+              _scheduleDraftSave();
+            },
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('إضافة ابن', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontWeight: FontWeight.w600)),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          ),
+        ),
+        const SizedBox(height: 4),
+        ...List.generate(_children.length, (i) => _CollapsibleChildCard(
+          child: _children[i],
+          index: i,
+          onFieldChanged: _scheduleDraftSave,
+          onRemove: () {
+            setState(() { _children.removeAt(i); _childCount = _children.length; });
+            _scheduleDraftSave();
+          },
+        )),
+      ],
     );
   }
 
-  Widget _buildChildCard(int index) {
-    final child = _children[index];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
-                child: Text('الابن ${index + 1}', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildLabel('الاسم الرباعي للابن'),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  initialValue: child.firstName,
-                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-                  decoration: _inputDecoration(hint: 'الاسم'),
-                  onChanged: (v) => child.firstName = v,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextFormField(
-                  initialValue: child.fatherName,
-                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-                  decoration: _inputDecoration(hint: 'الأب'),
-                  onChanged: (v) => child.fatherName = v,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  initialValue: child.grandName,
-                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-                  decoration: _inputDecoration(hint: 'الجد'),
-                  onChanged: (v) => child.grandName = v,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextFormField(
-                  initialValue: child.familyName,
-                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-                  decoration: _inputDecoration(hint: 'العائلة'),
-                  onChanged: (v) => child.familyName = v,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildLabel('النوع'),
-                    const SizedBox(height: 6),
-                    _buildChildGenderSelector(index),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildLabel('العمر'),
-                    const SizedBox(height: 6),
-                    GestureDetector(
-                      onTap: () async {
-                        final now = DateTime.now();
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: child.age != null ? DateTime(now.year - child.age!) : DateTime(now.year - 10, 1, 1),
-                          firstDate: DateTime(now.year - 100, 1, 1),
-                          lastDate: now,
-                          helpText: 'اختر تاريخ الميلاد',
-                          cancelText: 'إلغاء', confirmText: 'تأكيد',
-                        );
-                        if (picked != null) {
-                          setState(() => child.age = now.year - picked.year);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.calendar_today, color: AppColors.textHint, size: 18),
-                            const SizedBox(width: 8),
-                            Text(
-                              child.age != null ? '${child.age} سنة' : 'اختر',
-                              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: child.age != null ? AppColors.textPrimary : AppColors.textHint),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChildGenderSelector(int index) {
-    final child = _children[index];
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.border)),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => child.gender = 'male'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(color: child.gender == 'male' ? AppColors.primary : Colors.transparent, borderRadius: BorderRadius.circular(8)),
-                child: Text('ذكر', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13,
-                    fontWeight: FontWeight.bold, color: child.gender == 'male' ? Colors.white : AppColors.textSecondary)),
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => child.gender = 'female'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(color: child.gender == 'female' ? AppColors.primary : Colors.transparent, borderRadius: BorderRadius.circular(8)),
-                child: Text('أنثى', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13,
-                    fontWeight: FontWeight.bold, color: child.gender == 'female' ? Colors.white : AppColors.textSecondary)),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── STEP 3: SURVEY ─────────────────────────────────────────────────
+  // ─── STEP 3 (NEW): SURVEY ──────────────────────────────────────────
 
   Widget _buildSurveyStep() {
     if (_surveyTemplate == null) {
       return const SizedBox.shrink();
     }
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
-          Text('الاستبيان', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 4),
-          Text('أجب على الأسئلة التالية', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary)),
-          const SizedBox(height: 20),
+          _buildStepHeader(3),
           DynamicForm(
             template: _surveyTemplate!,
             onSubmit: (answers) {
@@ -1065,19 +1228,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  // ─── STEP 4: PASSWORD ───────────────────────────────────────────────
+  // ─── PASSWORD STEP ─────────────────────────────────────────────────
 
   Widget _buildPasswordStep() {
+    final idx = _surveyTemplate != null ? 4 : 3;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
-          Text('كلمة المرور', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 4),
-          Text('اختر كلمة مرور قوية لحماية حسابك', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary)),
-          const SizedBox(height: 20),
+          _buildStepHeader(idx),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
@@ -1168,9 +1328,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  // ─── STEP 5: REVIEW ─────────────────────────────────────────────────
+  // ─── REVIEW STEP ───────────────────────────────────────────────────
 
   Widget _buildReviewStep() {
+    final idx = _surveyTemplate != null ? 5 : 4;
     final fullName = _fullNameCtrl.text.trim();
     final spouseName = (_maritalStatus == 'married' || _maritalStatus == 'widowed')
         ? _spouseNameCtrl.text.trim()
@@ -1178,15 +1339,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final ageStr = _selectedDate != null ? '${DateTime.now().year - _selectedDate!.year} سنة' : '—';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
-          Text('مراجعة الطلب', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 4),
-          Text('تأكد من صحة بياناتك قبل الإرسال', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary)),
-          const SizedBox(height: 24),
+          _buildStepHeader(idx),
+          _buildWhatsNextBox(),
+          const SizedBox(height: 20),
           _buildReviewSection('البيانات الشخصية', [
             if (_profileImagePath != null) _buildReviewRow('الصورة', 'تم الاختيار'),
             _buildReviewRow('الاسم', fullName),
@@ -1215,14 +1374,40 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       child: Text('${_children.indexOf(c) + 1}', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(c.fullName, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: AppColors.textPrimary))),
+                    Expanded(child: Text(c.fullName.isEmpty ? 'الابن ${_children.indexOf(c) + 1}' : c.fullName, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: AppColors.textPrimary))),
                     Text('${c.gender == 'male' ? 'ذكر' : 'أنثى'} · $ageStr2', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary)),
                   ],
                 ),
               );
             }).toList()),
           ],
-          const SizedBox(height: 80),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWhatsNextBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.timeline_rounded, color: AppColors.primary, size: 20),
+              SizedBox(width: 12),
+              Text('ماذا يحدث بعد الإرسال؟',
+                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text(
+            'سيُراجع المشرف طلبك خلال 24–48 ساعة تقريبًا، ثم يُنشأ حسابك لك ولعائلتك. ستصل إليك رسالة عند القبول.',
+            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary, height: 1.7),
+          ),
         ],
       ),
     );
@@ -1242,11 +1427,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border.withOpacity(0.5))),
+      decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+          Text(title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
           const SizedBox(height: 12),
           ...children,
         ],
@@ -1259,152 +1444,445 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          SizedBox(width: 70, child: Text(label, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary))),
+          SizedBox(width: 90, child: Text(label, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary))),
           Expanded(child: Text(value, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary), textAlign: TextAlign.right)),
         ],
       ),
     );
   }
 
-  // ─── BOTTOM NAV ─────────────────────────────────────────────────────
+  // ─── BOTTOM NAV ────────────────────────────────────────────────────
 
   Widget _buildBottomNav() {
     final isLast = _currentStep == _totalSteps - 1;
+    final label = isLast ? (_isJoinFlow ? 'إرسال الطلب' : 'إرسال طلب الانضمام') : 'التالي';
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
       decoration: BoxDecoration(color: Colors.white, boxShadow: [
-        BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, -2)),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, -4)),
       ]),
       child: SafeArea(
         top: false,
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (_currentStep > 0)
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _prev,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                    side: BorderSide(color: AppColors.border),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text('السابق', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15)),
-                ),
-              ),
-            if (_currentStep > 0) const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
+            SizedBox(
+              width: double.infinity,
+              height: 52,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : (isLast ? _submitNewFamily : _next),
+                onPressed: _isLoading ? null : (isLast ? (_isJoinFlow ? _submitJoinFamily : _submitNewFamily) : _next),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  elevation: 0,
+                  disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
+                  elevation: 4,
+                  shadowColor: AppColors.primary.withValues(alpha: 0.28),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: _isLoading
                     ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                    : Text(
-                        isLast ? 'إرسال الطلب' : 'التالي',
-                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
+                    : Text(label, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
+            if (_currentStep > 0) ...[
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: _isLoading ? null : _prev,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  textStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                child: const Text('السابق'),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  // ─── JOIN FAMILY FORM ──────────────────────────────────────────────
+  // ─── JOIN FAMILY STEPS ─────────────────────────────────────────────
 
-  Widget _buildJoinFamilyForm() {
+  Widget _buildJoinPersonalStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Form(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepHeader(0),
+          _buildLabel('الاسم الرباعي *'),
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: _fullNameCtrl,
+            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
+            decoration: _inputDecoration(hint: 'الاسم - الأب - الجد - العائلة', errorText: _nameError),
+            onChanged: (_) {
+              if (_nameError != null) setState(() => _nameError = null);
+            },
+          ),
+          const SizedBox(height: 20),
+          _buildLabel('رقم الجوال *'),
+          const SizedBox(height: 6),
+          _buildPhoneField(),
+          const SizedBox(height: 20),
+          _buildLabel('كلمة المرور *'),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _passwordCtrl,
+            obscureText: _obscurePassword,
+            onChanged: (_) => setState(() {}),
+            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
+            decoration: _inputDecoration(
+              hint: 'أدخل كلمة المرور',
+              icon: Icons.lock_outline,
+              suffix: IconButton(
+                icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: AppColors.textHint, size: 20),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('يجب أن تحتوي كلمة المرور على:', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                const SizedBox(height: 10),
+                _buildCheckItem('8 أحرف على الأقل', _hasMin8Chars),
+                _buildCheckItem('حروف (أحرف عربية أو إنجليزية)', _hasLetters),
+                _buildCheckItem('أرقام (0-9)', _hasNumbers),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJoinFamilyHeadStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepHeader(1),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
+            child: const Row(
+              children: [
+                Icon(Icons.family_restroom, color: AppColors.primary, size: 20),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'أدخل رقم جوال ربّ أسرتك المسجّل لدينا — سيُعتمد طلبك بناءً عليه.',
+                    style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary, height: 1.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildLabel('رقم جوال رب الأسرة *'),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _familyHeadPhoneCtrl,
+            keyboardType: TextInputType.phone,
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.left,
+            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
+            decoration: _inputDecoration(hint: '912345678', icon: Icons.phone_outlined),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJoinReviewStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepHeader(2),
+          _buildWhatsNextBox(),
+          const SizedBox(height: 20),
+          _buildReviewSection('بياناتك', [
+            _buildReviewRow('الاسم', _fullNameCtrl.text.trim()),
+            _buildReviewRow('رقم جوالك', '${_selectedCountry.dialCode} ${_phoneCtrl.text.trim()}'),
+            _buildReviewRow('رقم جوال رب الأسرة', '${_selectedCountry.dialCode} ${_familyHeadPhoneCtrl.text.trim()}'),
+          ]),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── COLLAPSIBLE CHILD CARD ───────────────────────────────────────────
+
+class _CollapsibleChildCard extends StatefulWidget {
+  final ChildData child;
+  final int index;
+  final VoidCallback onFieldChanged;
+  final VoidCallback onRemove;
+
+  const _CollapsibleChildCard({
+    required this.child,
+    required this.index,
+    required this.onFieldChanged,
+    required this.onRemove,
+  });
+
+  @override
+  State<_CollapsibleChildCard> createState() => _CollapsibleChildCardState();
+}
+
+class _CollapsibleChildCardState extends State<_CollapsibleChildCard> {
+  bool _expanded = true;
+
+  String get _summary {
+    final parts = <String>[
+      widget.child.gender == 'male' ? 'ذكر' : 'أنثى',
+      if (widget.child.age != null) '${widget.child.age} سنوات',
+    ];
+    return parts.isEmpty ? 'لم تُحدد بياناته بعد' : parts.join(' · ');
+  }
+
+  Future<void> _pickAge() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: widget.child.age != null ? DateTime(now.year - widget.child.age!) : DateTime(now.year - 10, 1, 1),
+      firstDate: DateTime(now.year - 100, 1, 1),
+      lastDate: now,
+      helpText: 'اختر تاريخ الميلاد',
+      cancelText: 'إلغاء',
+      confirmText: 'تأكيد',
+    );
+    if (picked != null) {
+      setState(() => widget.child.age = now.year - picked.year);
+      widget.onFieldChanged();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final child = widget.child;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  const Icon(Icons.family_restroom, color: AppColors.primary, size: 20),
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(color: AppColors.primaryLight, shape: BoxShape.circle),
+                    child: Center(
+                      child: Text('${widget.index + 1}',
+                          style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text('انضم إلى عائلة موجودة برقم جوال رب الأسرة', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('الابن ${widget.index + 1}',
+                            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                        if (!_expanded) ...[
+                          const SizedBox(height: 2),
+                          Text(_summary,
+                              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary)),
+                        ],
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: widget.onRemove,
+                    icon: const Icon(Icons.close, size: 18, color: AppColors.error),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'حذف',
+                  ),
+                  Icon(
+                    _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: AppColors.textHint,
+                    size: 22,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            _buildLabel('رقم جوال رب الأسرة'),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              textDirection: TextDirection.ltr,
-              textAlign: TextAlign.left,
-              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-              decoration: _inputDecoration(hint: '912345678', icon: Icons.phone_outlined),
-            ),
-            const Divider(height: 32, color: AppColors.border),
-            _buildLabel('الاسم الرباعي'),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _fullNameCtrl,
-              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-              decoration: _inputDecoration(hint: 'الاسم - الأب - الجد - العائلة'),
-            ),
-            const SizedBox(height: 20),
-            _buildLabel('رقم الجوال'),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              textDirection: TextDirection.ltr,
-              textAlign: TextAlign.left,
-              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-              decoration: _inputDecoration(hint: '912345678', icon: Icons.phone_outlined),
-            ),
-            const SizedBox(height: 20),
-            _buildLabel('كلمة المرور'),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _passwordCtrl,
-              obscureText: _obscurePassword,
-              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-              decoration: _inputDecoration(
-                hint: '8 أحرف على الأقل + حروف + أرقام',
-                icon: Icons.lock_outline,
-                suffix: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: AppColors.textHint, size: 20),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _label('الاسم الرباعي للابن'),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          initialValue: child.fullName,
+                          style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15),
+                          decoration: _fieldDecoration('الاسم - الأب - الجد - العائلة'),
+                          onChanged: (v) {
+                            child.fullName = v;
+                            widget.onFieldChanged();
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _label('النوع'),
+                                  const SizedBox(height: 6),
+                                  _genderSelector(),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _label('العمر'),
+                                  const SizedBox(height: 6),
+                                  _ageField(),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _label('رقم الهوية (اختياري)'),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          initialValue: child.nationalId,
+                          keyboardType: TextInputType.number,
+                          textDirection: TextDirection.ltr,
+                          style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15),
+                          decoration: _fieldDecoration('رقم الهوية'),
+                          onChanged: (v) {
+                            child.nationalId = v;
+                            widget.onFieldChanged();
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _label(String text) {
+    return Text(text, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary));
+  }
+
+  InputDecoration _fieldDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', color: AppColors.textHint, fontSize: 13),
+      filled: true,
+      fillColor: AppColors.surface,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+    );
+  }
+
+  Widget _genderSelector() {
+    final child = widget.child;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.border)),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() => child.gender = 'male');
+                widget.onFieldChanged();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(color: child.gender == 'male' ? AppColors.primary : Colors.transparent, borderRadius: BorderRadius.circular(8)),
+                child: Text('ذكر', textAlign: TextAlign.center,
+                    style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13,
+                        fontWeight: FontWeight.bold, color: child.gender == 'male' ? Colors.white : AppColors.textSecondary)),
               ),
             ),
-            const SizedBox(height: 32),
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _submitJoinFamily,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary, foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: _isLoading
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                    : const Text('إرسال الطلب', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() => child.gender = 'female');
+                widget.onFieldChanged();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(color: child.gender == 'female' ? AppColors.primary : Colors.transparent, borderRadius: BorderRadius.circular(8)),
+                child: Text('أنثى', textAlign: TextAlign.center,
+                    style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13,
+                        fontWeight: FontWeight.bold, color: child.gender == 'female' ? Colors.white : AppColors.textSecondary)),
               ),
             ),
-            const SizedBox(height: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ageField() {
+    final child = widget.child;
+    return GestureDetector(
+      onTap: _pickAge,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today, color: AppColors.textHint, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              child.age != null ? '${child.age} سنة' : 'اختر',
+              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: child.age != null ? AppColors.textPrimary : AppColors.textHint),
+            ),
           ],
         ),
       ),

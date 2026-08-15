@@ -6,6 +6,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
+import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/groups/models/group.dart';
 
 const Color _kHeaderBorder = Color(0xFFE2E8F0);
@@ -30,22 +31,69 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
   bool _loading = true;
   String? _error;
   final Set<String> _joiningGroupIds = <String>{};
+  final Set<String> _joinedRooms = <String>{};
+  String? _activeChatGroupId;
 
   int _tabIndex = 0;
   bool _searchActive = false;
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
 
+  String? get _currentUserId => ref.read(authProvider).user?.id;
+
   @override
   void initState() {
     super.initState();
+    _setupSocket();
     _loadGroups();
   }
 
   @override
   void dispose() {
+    final socketService = ref.read(socketServiceProvider);
+    socketService.offEvent('message:new');
+    for (final id in _joinedRooms) {
+      socketService.leaveGroup(id);
+    }
+    _joinedRooms.clear();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _setupSocket() async {
+    final socketService = ref.read(socketServiceProvider);
+    socketService.offEvent('message:new');
+    await socketService.connect();
+    socketService.onMessageNew(_handleIncomingMessage);
+    _joinMemberRooms();
+  }
+
+  void _joinMemberRooms() {
+    final socketService = ref.read(socketServiceProvider);
+    for (final group in _allGroups.where((g) => g.isMember)) {
+      if (!_joinedRooms.contains(group.id)) {
+        socketService.joinGroup(group.id);
+        _joinedRooms.add(group.id);
+      }
+    }
+  }
+
+  void _handleIncomingMessage(Map<String, dynamic> data) {
+    final message = GroupMessage.fromSocketJson(data);
+    if (!mounted) return;
+    if (message.senderId == _currentUserId) return;
+    if (message.groupId == _activeChatGroupId) return;
+    setState(() {
+      final idx = _allGroups.indexWhere((g) => g.id == message.groupId);
+      if (idx < 0) return;
+      final group = _allGroups[idx];
+      if (!group.isMember) return;
+      _allGroups[idx] = group.copyWith(
+        unreadCount: group.unreadCount + 1,
+        lastMessage: message.isImage ? 'صورة 📷' : message.content,
+        lastMessageAt: message.createdAt,
+      );
+    });
   }
 
   Future<void> _loadGroups() async {
@@ -60,6 +108,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
           _allGroups = groups;
           _loading = false;
         });
+        _joinMemberRooms();
       }
     } catch (e) {
       if (mounted) {
@@ -90,7 +139,6 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
         ];
       });
       _openChat(group.id, group.name);
-      await _loadGroups();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -105,11 +153,19 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
     }
   }
 
-  void _openChat(String groupId, String groupName) {
-    context.pushNamed('groupChat', extra: {
+  Future<void> _openChat(String groupId, String groupName) async {
+    _activeChatGroupId = groupId;
+    await context.pushNamed('groupChat', extra: {
       'groupId': groupId,
       'groupName': groupName,
     });
+    if (!mounted) return;
+    _activeChatGroupId = null;
+    final socketService = ref.read(socketServiceProvider);
+    socketService.offEvent('message:new');
+    socketService.onMessageNew(_handleIncomingMessage);
+    _joinMemberRooms();
+    await _loadGroups();
   }
 
   @override

@@ -137,11 +137,11 @@ class HomeTab extends ConsumerWidget {
             ),
             _sheetItem(ctx, Icons.campaign_outlined, 'إضافة إعلان', () {
               Navigator.of(ctx).pop();
-              context.push('/news');
+              context.push('/add-announcement');
             }),
             _sheetItem(ctx, Icons.description_outlined, 'إضافة وفاة', () {
               Navigator.of(ctx).pop();
-              context.push('/news');
+              context.push('/add-obituary');
             }),
             _sheetItem(ctx, Icons.chat_bubble_outline_rounded, 'دردشة', () {
               Navigator.of(ctx).pop();

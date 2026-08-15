@@ -4,10 +4,26 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
-import 'package:tawati_mobile/src/core/socket_service.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/groups/models/group.dart';
+
+const _kChatBlue = Color(0xFF1E3A8A);
+const _kOnlineGreen = Color(0xFF16A34A);
+const _kIncomingBubble = Color(0xFFF1F5F9);
+const _kIncomingText = Color(0xFF1E293B);
+const _kTimestamp = Color(0xFF94A3B8);
+const _kDateText = Color(0xFF64748B);
+const _kFieldBg = Color(0xFFF8FAFC);
+const _kFieldBorder = Color(0xFFE2E8F0);
+const _kNameColor = Color(0xFF1A242B);
+const _kSoftBg = Color(0xFFF1F5F8);
+
+const _kApiBase = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://10.241.147.29:3000/api',
+);
+final String _kOrigin = _kApiBase.replaceFirst('/api', '');
 
 class GroupChatScreen extends ConsumerStatefulWidget {
   final String groupId;
@@ -28,7 +44,6 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   bool _loading = true;
   String? _error;
   bool _sending = false;
-  String? _myPermission;
   bool _viewOnly = false;
   final _inputController = TextEditingController();
   final _scrollController = ScrollController();
@@ -73,9 +88,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         }
         final optimisticIndex = _messages.indexWhere(
           (m) =>
+              m.id.startsWith('local-') &&
               m.senderId == message.senderId &&
               m.content == message.content &&
-              m.sendStatus != 'sent' &&
               message.createdAt.difference(m.createdAt).abs().inMinutes <= 2,
         );
         if (optimisticIndex >= 0) {
@@ -121,7 +136,6 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
       if (mounted) {
         setState(() {
           _messages = result.messages;
-          _myPermission = result.myPermission;
           _viewOnly = result.myPermission == 'view_only' || result.myMemberStatus == 'muted';
           _loading = false;
         });
@@ -179,7 +193,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           if (idx >= 0) {
             _messages[idx] = message.copyWith(sendStatus: 'sent');
           } else {
-            _messages.add(message.copyWith(sendStatus: 'sent'));
+            final serverIdx = _messages.indexWhere((m) => m.id == message.id);
+            if (serverIdx >= 0) {
+              _messages[serverIdx] = message.copyWith(sendStatus: 'sent');
+            } else {
+              _messages.add(message.copyWith(sendStatus: 'sent'));
+            }
           }
         });
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -224,6 +243,13 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           final idx = _messages.indexWhere((m) => m.id == optimistic.id);
           if (idx >= 0) {
             _messages[idx] = message.copyWith(sendStatus: 'sent');
+          } else {
+            final serverIdx = _messages.indexWhere((m) => m.id == message.id);
+            if (serverIdx >= 0) {
+              _messages[serverIdx] = message.copyWith(sendStatus: 'sent');
+            } else {
+              _messages.add(message.copyWith(sendStatus: 'sent'));
+            }
           }
         });
       } catch (_) {
@@ -406,39 +432,13 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isMutedLocally = ref.watch(localMutedGroupsProvider).contains(widget.groupId);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.surface,
-        appBar: AppBar(
-          title: Text(widget.groupName),
-          backgroundColor: Colors.white,
-          foregroundColor: AppColors.textPrimary,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          actions: [
-            IconButton(
-              tooltip: isMutedLocally ? 'تفعيل الإشعارات' : 'كتم الإشعارات',
-              icon: Icon(
-                isMutedLocally ? Icons.notifications_off_outlined : Icons.notifications_none,
-                color: AppColors.textPrimary,
-              ),
-              onPressed: () {
-                ref.read(localMutedGroupsProvider.notifier).toggle(widget.groupId);
-              },
-            ),
-            if (_viewOnly)
-              const Padding(
-                padding: EdgeInsets.only(left: 16),
-                child: Center(
-                  child: Icon(Icons.visibility_outlined, size: 20, color: AppColors.textSecondary),
-                ),
-              ),
-          ],
-        ),
         body: Column(
           children: [
+            _buildHeader(),
             if (_viewOnly)
               Container(
                 width: double.infinity,
@@ -457,6 +457,103 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             if (!_viewOnly) _buildInputBar(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    final isMutedLocally = ref.watch(localMutedGroupsProvider).contains(widget.groupId);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: _kFieldBorder)),
+      ),
+      child: Row(
+        children: [
+          _HeaderCircleButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => Navigator.of(context).pop(),
+          ),
+          const SizedBox(width: 12),
+          _GroupAvatar(name: widget.groupName),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.groupName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: _kNameColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'متصل الآن',
+                  style: TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 12,
+                    color: _kOnlineGreen,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<_HeaderAction>(
+            tooltip: 'المزيد',
+            color: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            offset: const Offset(0, 44),
+            onSelected: (action) {
+              if (action == _HeaderAction.mute) {
+                ref.read(localMutedGroupsProvider.notifier).toggle(widget.groupId);
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: _HeaderAction.mute,
+                child: Row(
+                  children: [
+                    Icon(
+                      isMutedLocally ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
+                      size: 20,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      isMutedLocally ? 'تفعيل الإشعارات' : 'كتم الإشعارات',
+                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              if (_viewOnly)
+                const PopupMenuItem(
+                  value: _HeaderAction.none,
+                  enabled: false,
+                  child: Row(
+                    children: [
+                      Icon(Icons.visibility_outlined, size: 20, color: AppColors.textHint),
+                      SizedBox(width: 10),
+                      Text(
+                        'وضع العرض فقط',
+                        style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            child: const _HeaderCircleButton(
+              icon: Icons.more_horiz_rounded,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -513,7 +610,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           return Column(
             children: [
               if (showDateSeparator) _buildDateSeparator(message.createdAt),
-              _buildMessageBubble(message),
+              _buildMessageBubble(_messages, index),
             ],
           );
         },
@@ -526,18 +623,18 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.border,
-            borderRadius: BorderRadius.circular(12),
+            color: _kIncomingBubble,
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
             _formatDate(date),
             style: const TextStyle(
               fontFamily: 'IBMPlexSansArabic',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
+              color: _kDateText,
             ),
           ),
         ),
@@ -545,94 +642,152 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     );
   }
 
-  Widget _buildMessageBubble(GroupMessage message) {
+  bool _shouldShowSenderName(GroupMessage message) =>
+      message.senderName.trim().isNotEmpty;
+
+  String _resolveImageUrl(String content) {
+    if (content.startsWith('http')) return content;
+    return '$_kOrigin$content';
+  }
+
+  Widget _buildMessageBubble(List<GroupMessage> messages, int index) {
+    final message = messages[index];
     final isMine = message.senderId == _currentUserId;
     final timeStr = DateFormat('HH:mm').format(message.createdAt);
     final isFailed = message.sendStatus == 'failed';
+    final showSenderName = !isMine && _shouldShowSenderName(message);
 
     return Align(
       alignment: isMine ? Alignment.centerLeft : Alignment.centerRight,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        child: Column(
-          crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            if (!isMine)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4, right: 4, left: 4),
-                child: Text(
-                  message.senderName,
-                  style: const TextStyle(
-                    fontFamily: 'IBMPlexSansArabic',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            GestureDetector(
-              onLongPress: () => _showReactionPicker(message),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isMine ? AppColors.primaryLight : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(16),
-                    topRight: const Radius.circular(16),
-                    bottomLeft: Radius.circular(isMine ? 4 : 16),
-                    bottomRight: Radius.circular(isMine ? 16 : 4),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      message.content,
-                      style: const TextStyle(
-                        fontFamily: 'IBMPlexSansArabic',
-                        fontSize: 14,
-                        color: AppColors.textPrimary,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          timeStr,
-                          style: const TextStyle(
-                            fontFamily: 'IBMPlexSansArabic',
-                            fontSize: 10,
-                            color: AppColors.textHint,
-                          ),
-                        ),
-                        if (isMine) ...[
-                          const SizedBox(width: 4),
-                          if (message.sendStatus == 'pending')
-                            const SizedBox(
-                              width: 12,
-                              height: 12,
-                              child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.textHint),
-                            )
-                          else if (isFailed)
-                            InkWell(
-                              onTap: () => _retryFailedMessage(message),
-                              child: const Icon(Icons.error_outline, size: 14, color: AppColors.error),
-                            )
-                          else
-                            const Icon(Icons.done, size: 14, color: AppColors.textHint),
-                        ],
-                      ],
-                    ),
-                  ],
+      child: Column(
+        crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showSenderName)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4, right: 4, left: 4),
+              child: Text(
+                message.senderName,
+                style: const TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: _kDateText,
                 ),
               ),
             ),
-            _buildReactionsRow(message),
-          ],
+          GestureDetector(
+            onLongPress: () => _showReactionPicker(message),
+            child: Container(
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+              padding: message.isImage ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isMine ? _kChatBlue : _kIncomingBubble,
+                borderRadius: isMine
+                    ? const BorderRadius.only(
+                        topLeft: Radius.circular(4),
+                        topRight: Radius.circular(16),
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      )
+                    : const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(4),
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
+              ),
+              child: _buildMessageContent(message, isMine),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 4, right: 4, left: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+              children: [
+                Text(
+                  timeStr,
+                  style: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 11,
+                    color: _kTimestamp,
+                  ),
+                ),
+                if (isMine) ...[
+                  const SizedBox(width: 4),
+                  if (message.sendStatus == 'pending')
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 1.5, color: _kTimestamp),
+                    )
+                  else if (isFailed)
+                    InkWell(
+                      onTap: () => _retryFailedMessage(message),
+                      child: const Icon(Icons.error_outline, size: 14, color: AppColors.error),
+                    )
+                  else
+                    const Icon(Icons.done, size: 14, color: _kTimestamp),
+                ],
+              ],
+            ),
+          ),
+          _buildReactionsRow(message),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageContent(GroupMessage message, bool isMine) {
+    if (message.isImage) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Image.network(
+          _resolveImageUrl(message.content),
+          width: 220,
+          height: 200,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              width: 220,
+              height: 200,
+              color: _kIncomingBubble,
+              alignment: Alignment.center,
+              child: const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2, color: _kDateText),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stack) => Container(
+            width: 220,
+            height: 200,
+            color: _kIncomingBubble,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              message.content,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'IBMPlexSansArabic',
+                fontSize: 14,
+                color: isMine ? Colors.white : _kIncomingText,
+              ),
+            ),
+          ),
         ),
+      );
+    }
+    return Text(
+      message.content,
+      style: TextStyle(
+        fontFamily: 'IBMPlexSansArabic',
+        fontSize: 15,
+        color: isMine ? Colors.white : _kIncomingText,
+        height: 1.5,
       ),
     );
   }
@@ -640,52 +795,68 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   Widget _buildInputBar() {
     return Container(
       padding: EdgeInsets.only(
-        left: 12,
-        right: 12,
-        top: 8,
+        left: 16,
+        right: 16,
+        top: 12,
         bottom: MediaQuery.of(context).padding.bottom + 8,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
+        border: Border(top: BorderSide(color: _kFieldBorder, width: 1)),
       ),
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: _inputController,
-              textDirection: TextDirection.rtl,
-              onSubmitted: (_) => _sendMessage(),
-              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'اكتب رسالتك...',
-                hintStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', color: AppColors.textHint, fontSize: 14),
-                filled: true,
-                fillColor: AppColors.surface,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: const BorderSide(color: AppColors.border),
+            child: SizedBox(
+              height: 52,
+              child: TextField(
+                controller: _inputController,
+                textDirection: TextDirection.rtl,
+                onSubmitted: (_) => _sendMessage(),
+                style: const TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 14,
+                  color: _kIncomingText,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                decoration: InputDecoration(
+                  hintText: 'اكتب رسالتك هنا...',
+                  hintStyle: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    color: _kTimestamp,
+                    fontSize: 14,
+                  ),
+                  filled: true,
+                  fillColor: _kFieldBg,
+                  suffixIcon: const Padding(
+                    padding: EdgeInsets.only(left: 12),
+                    child: Icon(Icons.attach_file_rounded, color: _kTimestamp, size: 22),
+                  ),
+                  suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(26),
+                    borderSide: const BorderSide(color: _kFieldBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(26),
+                    borderSide: const BorderSide(color: _kFieldBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(26),
+                    borderSide: const BorderSide(color: _kChatBlue, width: 1.5),
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Semantics(
             label: 'إرسال',
             child: Container(
-              width: 44,
-              height: 44,
+              width: 52,
+              height: 52,
               decoration: const BoxDecoration(
-                color: AppColors.primary,
+                color: _kChatBlue,
                 shape: BoxShape.circle,
               ),
               child: IconButton(
@@ -699,7 +870,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.send, color: Colors.white, size: 20),
+                    : const Icon(Icons.send_rounded, color: Colors.white, size: 22),
               ),
             ),
           ),
@@ -735,6 +906,89 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+enum _HeaderAction { mute, none }
+
+class _HeaderCircleButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const _HeaderCircleButton({required this.icon, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: _kSoftBg,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(icon, color: _kNameColor, size: 22),
+      ),
+    );
+  }
+}
+
+class _GroupAvatar extends StatelessWidget {
+  final String name;
+
+  const _GroupAvatar({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .take(2)
+        .map((w) => String.fromCharCode(w.runes.first))
+        .join('');
+
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Stack(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _kIncomingBubble,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              initials.isEmpty ? 'م' : initials,
+              style: const TextStyle(
+                fontFamily: 'IBMPlexSansArabic',
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _kChatBlue,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            bottom: 0,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: _kOnlineGreen,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

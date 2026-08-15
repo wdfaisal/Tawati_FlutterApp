@@ -5,10 +5,14 @@ import 'package:tawati_mobile/src/features/auth/screens/login_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/first_login_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/family_setup_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/register_screen.dart';
+import 'package:tawati_mobile/src/features/auth/screens/pending_review_screen.dart';
+import 'package:tawati_mobile/src/features/auth/screens/welcome_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/otp_verification_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/home_screen.dart';
 import 'package:tawati_mobile/src/features/news/screens/news_tab.dart';
 import 'package:tawati_mobile/src/features/news/screens/news_detail_screen.dart';
+import 'package:tawati_mobile/src/features/news/screens/add_announcement_screen.dart';
+import 'package:tawati_mobile/src/features/news/screens/add_obituary_screen.dart';
 import 'package:tawati_mobile/src/features/donations/screens/donations_tab.dart';
 import 'package:tawati_mobile/src/features/donations/screens/campaign_detail_screen.dart';
 import 'package:tawati_mobile/src/features/donations/screens/my_donations_screen.dart';
@@ -36,21 +40,32 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const LoginScreen(),
         transitionDuration: const Duration(milliseconds: 500),
-        reverseTransitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 350),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           final curved = CurvedAnimation(
             parent: animation,
             curve: Curves.easeOutCubic,
             reverseCurve: Curves.easeInCubic,
           );
-          return FadeTransition(
-            opacity: curved,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.25, 0),
-                end: Offset.zero,
-              ).animate(curved),
-              child: child,
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1.0, 0),
+              end: Offset.zero,
+            ).animate(curved),
+            child: FadeTransition(
+              opacity: curved,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 28,
+                      offset: const Offset(-14, 0),
+                    ),
+                  ],
+                ),
+                child: child,
+              ),
             ),
           );
         },
@@ -80,6 +95,50 @@ final appRouter = GoRouter(
       builder: (c, s) {
         final extra = s.extra as Map?;
         return FamilySetupScreen(userId: extra?['userId'] as String? ?? '');
+      },
+    ),
+    GoRoute(
+      path: '/pending-review',
+      name: 'pendingReview',
+      pageBuilder: (context, state) {
+        final requestId = (state.extra as Map?)?['requestId'] as String? ?? '';
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: PendingReviewScreen(requestId: requestId),
+          transitionDuration: const Duration(milliseconds: 350),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+            return FadeTransition(
+              opacity: curved,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.94, end: 1).animate(curved),
+                child: child,
+              ),
+            );
+          },
+        );
+      },
+    ),
+    GoRoute(
+      path: '/welcome',
+      name: 'welcome',
+      pageBuilder: (context, state) {
+        final name = (state.extra as Map?)?['name'] as String? ?? '';
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: WelcomeScreen(userName: name),
+          transitionDuration: const Duration(milliseconds: 400),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+            return FadeTransition(
+              opacity: curved,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.9, end: 1).animate(curved),
+                child: child,
+              ),
+            );
+          },
+        );
       },
     ),
     GoRoute(
@@ -142,6 +201,16 @@ final appRouter = GoRouter(
       path: '/notifications',
       name: 'notifications',
       builder: (c, s) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/add-announcement',
+      name: 'addAnnouncement',
+      builder: (c, s) => const AddAnnouncementScreen(),
+    ),
+    GoRoute(
+      path: '/add-obituary',
+      name: 'addObituary',
+      builder: (c, s) => const AddObituaryScreen(),
     ),
   ],
 );
