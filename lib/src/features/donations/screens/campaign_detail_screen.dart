@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' hide TextDirection;
-import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' hide PaymentMethod;
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
@@ -600,6 +600,13 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
   bool _isManual = true;
   bool _submitting = false;
 
+  List<PaymentMethod> get _manualMethods =>
+      widget.campaign.paymentMethods.where((m) => m.type == 'manual').toList();
+
+  bool get _stripeAvailable =>
+      widget.campaign.paymentMethods
+          .any((m) => m.type == 'automatic' && m.providerKey == 'stripe');
+
   @override
   void dispose() {
     _amountController.dispose();
@@ -614,9 +621,7 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
       final amount = double.parse(_amountController.text);
 
       if (_isManual) {
-        final manualMethods = widget.campaign.paymentMethods
-            .where((m) => m.type == 'manual')
-            .toList();
+        final manualMethods = _manualMethods;
         if (manualMethods.isEmpty) {
           if (mounted) {
             setState(() => _submitting = false);
@@ -796,27 +801,29 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _isManual = false),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: !_isManual ? AppColors.primaryLight : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: !_isManual ? AppColors.primary : AppColors.border, width: !_isManual ? 2 : 1),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.credit_card_outlined, color: !_isManual ? AppColors.primary : AppColors.textHint),
-                            const SizedBox(height: 8),
-                            Text('Stripe', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: !_isManual ? AppColors.primary : AppColors.textSecondary)),
-                          ],
+                  if (_stripeAvailable) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _isManual = false),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: !_isManual ? AppColors.primaryLight : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: !_isManual ? AppColors.primary : AppColors.border, width: !_isManual ? 2 : 1),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.credit_card_outlined, color: !_isManual ? AppColors.primary : AppColors.textHint),
+                              const SizedBox(height: 8),
+                              Text('Stripe', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: !_isManual ? AppColors.primary : AppColors.textSecondary)),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
               if (_isManual) ...[
