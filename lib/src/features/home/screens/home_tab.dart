@@ -540,11 +540,17 @@ class _CampaignCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(color: _kSoftBg, borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.volunteer_activism_outlined, size: 22, color: AppColors.primary),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: campaign.image != null && campaign.image!.isNotEmpty
+                      ? Image.network(
+                          resolveMediaUrl(campaign.image),
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const _CampaignThumb(),
+                        )
+                      : const _CampaignThumb(),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1273,4 +1279,18 @@ String _toArabicDigits(String input) {
 String _formatDate(DateTime dt) {
   final d = dt.toLocal();
   return _toArabicDigits('${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}');
+}
+
+class _CampaignThumb extends StatelessWidget {
+  const _CampaignThumb();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(color: _kSoftBg, borderRadius: BorderRadius.circular(12)),
+      child: const Icon(Icons.volunteer_activism_outlined, size: 22, color: AppColors.primary),
+    );
+  }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
+import 'package:tawati_mobile/src/core/media_url.dart';
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
@@ -426,6 +427,7 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
     final progress = campaign.progress;
     final percent = (progress * 100).toInt();
     final fmt = NumberFormat('#,##0');
+    final hasImage = campaign.image != null && campaign.image!.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -440,14 +442,17 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.water_drop_outlined, size: 36, color: AppColors.primary.withValues(alpha: 0.6)),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: hasImage
+                ? Image.network(
+                    resolveMediaUrl(campaign.image),
+                    width: 88,
+                    height: 88,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const _CampaignThumbFallback(),
+                  )
+                : const _CampaignThumbFallback(),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -533,6 +538,23 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CampaignThumbFallback extends StatelessWidget {
+  const _CampaignThumbFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 88,
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(Icons.water_drop_outlined, size: 36, color: AppColors.primary.withValues(alpha: 0.6)),
     );
   }
 }
