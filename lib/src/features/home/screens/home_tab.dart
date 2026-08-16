@@ -626,7 +626,7 @@ class _AnnouncementsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return newsAsync.when(
       data: (list) {
-        final items = list.where((n) => n.type == 'admin_alert' || n.type == 'announcement').toList();
+        final items = list.where((n) => n.isAnnouncement).toList();
         if (items.isEmpty) return const SizedBox.shrink();
         return _sectionPadding(
           child: Column(
@@ -894,7 +894,7 @@ class _DeathsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return newsAsync.when(
       data: (list) {
-        final deaths = list.where((n) => n.type == 'obituary').toList();
+        final deaths = list.where((n) => n.isDeath).toList();
         if (deaths.isEmpty) return const SizedBox.shrink();
         return _sectionPadding(
           child: Column(
@@ -945,7 +945,7 @@ class _DeathCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'المرحوم بإذن الله: ${item.title}',
+                    'المرحوم بإذن الله: ${item.title.replaceFirst('نعي — ', '')}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: _kNameColor),
@@ -1248,10 +1248,9 @@ Map<String, dynamic> _newsToMap(News n) {
     'title': n.title,
     'subtitle': n.subtitle,
     'type': n.type,
-    'sub_type': switch (n.type) {
+    'sub_type': n.subType ?? switch (n.type) {
       'obituary' => 'death',
       'wedding' => 'wedding',
-      'social_occasion' => 'congratulation',
       _ => '',
     },
     'created_at': dateStr,

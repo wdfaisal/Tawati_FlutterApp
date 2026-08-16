@@ -8,6 +8,7 @@ import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/groups/models/group.dart';
+import 'package:tawati_mobile/src/features/news/models/news.dart';
 
 const Color _kHeaderBorder = Color(0xFFE2E8F0);
 const Color _kSoftBg = Color(0xFFF1F5F8);
@@ -16,6 +17,10 @@ const Color _kSecondary = Color(0xFF62707B);
 const Color _kNameColor = Color(0xFF1A242B);
 const Color _kDivider = Color(0xFFF1F5F8);
 const Color _kOnlineGreen = Color(0xFF22C55E);
+
+final _groupsNewsProvider = FutureProvider.autoDispose<List<News>>((ref) {
+  return ref.read(newsServiceProvider).getNews();
+});
 
 class GroupsTab extends ConsumerStatefulWidget {
   const GroupsTab({super.key});
@@ -285,7 +290,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
   Widget _buildTabContent() {
     if (_loading) return _buildShimmer();
     if (_error != null) return _buildError();
-    if (_tabIndex != 0) return _buildEmptyTab(_tabIndex);
+    if (_tabIndex != 0) return _buildNewsTab(_tabIndex);
 
     final chats = _allGroups.where((g) => g.isMember).toList();
     final query = _query.trim();
@@ -311,6 +316,81 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNewsTab(int index) {
+    final newsAsync = ref.watch(_groupsNewsProvider);
+    return newsAsync.when(
+      loading: () => _buildNewsShimmer(),
+      error: (_, _) => _buildNewsError(),
+      data: (list) {
+        final items = switch (index) {
+          1 => list.where((n) => n.isEvent).toList(),
+          2 => list.where((n) => n.isDeath).toList(),
+          _ => list.where((n) => n.isAnnouncement).toList(),
+        };
+        if (items.isEmpty) return _buildEmptyTab(index);
+        return RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () => ref.refresh(_groupsNewsProvider.future),
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(top: 8, bottom: 24),
+            itemCount: items.length,
+            itemBuilder: (context, i) => _NewsCard(item: items[i]),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNewsShimmer() {
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (context, index) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _kDivider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            skeletonLine(width: 80, height: 14, margin: EdgeInsets.zero),
+            const SizedBox(height: 12),
+            skeletonLine(height: 14, margin: EdgeInsets.zero),
+            const SizedBox(height: 8),
+            skeletonLine(width: 180, height: 13, margin: EdgeInsets.zero),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNewsError() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 44, color: _kMuted),
+          const SizedBox(height: 14),
+          const Text(
+            'تعذر تحميل الأخبار',
+            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: _kSecondary),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: () => ref.refresh(_groupsNewsProvider.future),
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('إعادة المحاولة'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -783,4 +863,123 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
     }
     return buffer.toString();
   }
+}
+
+class _NewsCard extends StatelessWidget {
+  final News item;
+
+  const _NewsCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, chipColor) = _labelFor(item);
+    final date = _formatNewsDate(item.createdAt);
+    return GestureDetector(
+      onTap: () => context.push('/news/detail', extra: _newsToMap(item)),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _kDivider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: chipColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: 'IBMPlexSansArabic',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: chipColor,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  date,
+                  style: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 11,
+                    color: _kMuted,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              item.title,
+              style: const TextStyle(
+                fontFamily: 'IBMPlexSansArabic',
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: _kNameColor,
+              ),
+            ),
+            if (item.content.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                item.content,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 13,
+                  color: _kSecondary,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+(String, Color) _labelFor(News n) {
+  if (n.isDeath) return ('نعي', const Color(0xFF94A3B8));
+  if (n.isWedding) return ('عرس', const Color(0xFFF59E0B));
+  if (n.isCongratulation) return ('تهنئة', const Color(0xFF0D9488));
+  switch (n.type) {
+    case 'admin_alert': return ('إعلان إداري', const Color(0xFF0D9488));
+    case 'important': return ('إعلان', const Color(0xFFEF4444));
+    case 'social_occasion': return ('مناسبة', const Color(0xFFF59E0B));
+    default: return ('إعلان', const Color(0xFF3B82F6));
+  }
+}
+
+String _formatNewsDate(DateTime dt) {
+  final d = dt.toLocal();
+  const digits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  final dateStr = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  final buffer = StringBuffer();
+  for (final char in dateStr.split('')) {
+    final code = char.codeUnitAt(0) - 0x30;
+    buffer.write(code >= 0 && code <= 9 ? digits[code] : char);
+  }
+  return buffer.toString();
+}
+
+Map<String, dynamic> _newsToMap(News n) {
+  final d = n.createdAt.toLocal();
+  final dateStr = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  return {
+    'title': n.title,
+    'subtitle': n.subtitle,
+    'content': n.content,
+    'type': n.type,
+    'sub_type': n.subType ?? '',
+    'created_at': dateStr,
+  };
 }

@@ -4,6 +4,7 @@
   final String? subtitle;
   final String content;
   final String type;
+  final String? subType;
   final String? image;
   final List<String> targetRoles;
   final List<String> targetFamilies;
@@ -18,6 +19,7 @@
     this.subtitle,
     required this.content,
     required this.type,
+    this.subType,
     this.image,
     required this.targetRoles,
     required this.targetFamilies,
@@ -33,23 +35,33 @@
     subtitle: json['subtitle'],
     content: json['content'] ?? '',
     type: json['type'] ?? 'general',
+    subType: json['sub_type'] as String?,
     image: json['image'],
     targetRoles: List<String>.from(json['target_roles'] ?? []),
     targetFamilies: List<String>.from(json['target_families'] ?? []),
     createdByName: json['created_by_name'],
-    isPublished: json['is_published'] ?? false,
+    isPublished: json['is_published'] ?? (json['status'] == 'published'),
     publishedAt: json['published_at'] != null ? DateTime.tryParse(json['published_at']) : null,
     createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
   );
 
+  bool get isDeath => type == 'social_occasion' && subType == 'death';
+  bool get isWedding => type == 'social_occasion' && subType == 'wedding';
+  bool get isCongratulation => type == 'social_occasion' && subType == 'congratulation';
+  bool get isEvent => type == 'social_occasion' && subType != 'death';
+  bool get isAnnouncement => type == 'general' || type == 'important' || type == 'admin_alert';
+
   String get typeLabel {
+    if (isDeath) return 'نعي';
+    if (isWedding) return 'عرس';
+    if (isCongratulation) return 'تهنئة';
     switch (type) {
+      case 'general':
+      case 'important': return 'إعلان';
+      case 'admin_alert': return 'إعلان إداري';
+      case 'social_occasion': return 'مناسبة';
       case 'obituary': return 'نعي';
       case 'wedding': return 'عرس';
-      case 'announcement': return 'إعلان';
-      case 'important': return 'مهم';
-      case 'admin_alert': return 'إعلان إداري';
-      case 'social_occasion': return 'مناسبة اجتماعية';
       default: return 'خبر';
     }
   }

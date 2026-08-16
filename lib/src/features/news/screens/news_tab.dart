@@ -290,9 +290,9 @@ class _NewsTabState extends ConsumerState<NewsTab> {
       case NewsFilter.wedding:
         return subType == 'wedding';
       case NewsFilter.announcement:
-        return type == 'admin_alert';
+        return type == 'general' || type == 'important' || type == 'admin_alert';
       case NewsFilter.news:
-        return type == 'general' || type == 'important' || (type == 'social_occasion' && subType == 'congratulation');
+        return type == 'social_occasion' && subType == 'congratulation';
       default:
         return true;
     }
@@ -305,8 +305,9 @@ class _NewsTabState extends ConsumerState<NewsTab> {
     if (subType == 'wedding') return 'عرس';
     if (subType == 'congratulation') return 'تهنئة';
     switch (type) {
-      case 'admin_alert': return 'إعلان';
-      case 'important': return 'مهم';
+      case 'general':
+      case 'important': return 'إعلان';
+      case 'admin_alert': return 'إعلان إداري';
       case 'social_occasion': return 'مناسبة';
       default: return 'خبر';
     }
@@ -318,7 +319,8 @@ class _NewsTabState extends ConsumerState<NewsTab> {
     if (subType == 'death') return const Color(0xFF94A3B8);
     if (subType == 'wedding') return const Color(0xFFF59E0B);
     switch (type) {
-      case 'admin_alert': return const Color(0xFF0D9488);
+      case 'admin_alert':
+      case 'general': return const Color(0xFF0D9488);
       case 'important': return const Color(0xFFEF4444);
       default: return const Color(0xFF3B82F6);
     }
