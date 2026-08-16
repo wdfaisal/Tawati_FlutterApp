@@ -21,7 +21,7 @@ const _kSoftBg = Color(0xFFF1F5F8);
 
 const _kApiBase = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://10.241.147.29:3000/api',
+  defaultValue: 'http://10.237.182.29:3000/api',
 );
 final String _kOrigin = _kApiBase.replaceFirst('/api', '');
 
