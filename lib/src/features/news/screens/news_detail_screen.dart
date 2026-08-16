@@ -227,7 +227,9 @@ class NewsDetailScreen extends ConsumerWidget {
     final subtitle = item['subtitle'] as String? ?? item['description'] as String? ?? '';
     final body = item['body'] as String? ?? item['content'] as String? ?? '';
     final imageUrl = resolveMediaUrl(item['image'] as String?);
-    final dateText = _dateText(item['created_at'] as String?);
+    final createdBy = item['created_by'];
+    final publisher = createdBy is Map ? (createdBy['full_name'] as String? ?? '') : '';
+    final dateText = _dateText((item['published_at'] as String?) ?? (item['created_at'] as String?));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,6 +276,25 @@ class NewsDetailScreen extends ConsumerWidget {
                 style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: _kSlate400),
               ),
               const Spacer(),
+              if (publisher.isNotEmpty) ...[
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person_outline, size: 14, color: _kSlate400),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          publisher,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: _kSlate400),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -727,6 +748,8 @@ class NewsDetailScreen extends ConsumerWidget {
         return 'إعلان';
       case 'important':
         return 'إعلان هام';
+      case 'platform_announcement':
+        return 'إعلان المنصة';
       case 'social_occasion':
         return 'مناسبة';
       default:

@@ -39,7 +39,9 @@
     image: json['image'],
     targetRoles: List<String>.from(json['target_roles'] ?? []),
     targetFamilies: List<String>.from(json['target_families'] ?? []),
-    createdByName: json['created_by_name'],
+    createdByName: json['created_by'] is Map
+        ? (json['created_by'] as Map)['full_name']?.toString()
+        : json['created_by_name']?.toString(),
     isPublished: json['is_published'] ?? (json['status'] == 'published'),
     publishedAt: json['published_at'] != null ? DateTime.tryParse(json['published_at']) : null,
     createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
@@ -49,7 +51,8 @@
   bool get isWedding => type == 'social_occasion' && subType == 'wedding';
   bool get isCongratulation => type == 'social_occasion' && subType == 'congratulation';
   bool get isEvent => type == 'social_occasion' && subType != 'death';
-  bool get isAnnouncement => type == 'general' || type == 'important' || type == 'admin_alert';
+  bool get isAnnouncement =>
+      type == 'general' || type == 'important' || type == 'admin_alert' || type == 'platform_announcement';
 
   String get typeLabel {
     if (isDeath) return 'نعي';
@@ -59,6 +62,7 @@
       case 'general':
       case 'important': return 'إعلان';
       case 'admin_alert': return 'إعلان إداري';
+      case 'platform_announcement': return 'إعلان المنصة';
       case 'social_occasion': return 'مناسبة';
       case 'obituary': return 'نعي';
       case 'wedding': return 'عرس';

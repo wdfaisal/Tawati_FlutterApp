@@ -954,6 +954,7 @@ class _NewsCard extends StatelessWidget {
   if (n.isCongratulation) return ('تهنئة', const Color(0xFF0D9488));
   switch (n.type) {
     case 'admin_alert': return ('إعلان إداري', const Color(0xFF0D9488));
+    case 'platform_announcement': return ('إعلان المنصة', const Color(0xFF1E40AF));
     case 'important': return ('إعلان', const Color(0xFFEF4444));
     case 'social_occasion': return ('مناسبة', const Color(0xFFF59E0B));
     default: return ('إعلان', const Color(0xFF3B82F6));

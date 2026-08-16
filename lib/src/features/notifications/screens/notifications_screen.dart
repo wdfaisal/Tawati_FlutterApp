@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../models/notification.dart';
@@ -28,13 +29,18 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     ref.invalidate(notificationsProvider);
   }
 
-  void _openNotification(AppNotification notification) {
+  Future<void> _openNotification(AppNotification notification) async {
     final type = notification.relatedResourceType;
     final id = notification.relatedResourceId;
     if (type == 'campaign' && id != null && id.isNotEmpty) {
       context.push('/campaign/$id');
     } else if (type == 'initiative' && id != null && id.isNotEmpty) {
       context.push('/initiative-detail/$id');
+    } else if (type == 'news' && id != null && id.isNotEmpty) {
+      try {
+        final item = await ref.read(newsServiceProvider).getNewsById(id);
+        if (mounted) context.push('/news/detail', extra: item);
+      } catch (_) {}
     } else if (type == 'donation') {
       context.push('/my-donations');
     }
@@ -249,6 +255,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       case 'announcement':
       case 'admin_alert':
       case 'obituary':
+      case 'platform_announcement':
         return Icons.campaign_outlined;
       case 'family':
       case 'family_member':

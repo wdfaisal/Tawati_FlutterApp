@@ -1,6 +1,4 @@
-﻿import 'package:dio/dio.dart';
-
-import '../../../core/api_client.dart';
+﻿import '../../../core/api_client.dart';
 import '../models/news.dart';
 
 class NewsService {
@@ -17,6 +15,14 @@ class NewsService {
     return list.map((e) => News.fromJson(e)).toList();
   }
 
+  Future<Map<String, dynamic>> getNewsById(String id) async {
+    final response = await _api.get('/news/$id');
+    final data = response.data;
+    if (data is Map && data['data'] is Map) return Map<String, dynamic>.from(data['data'] as Map);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw Exception('تعذر تحميل الإعلان');
+  }
+
   Future<void> createNews(Map<String, dynamic> body) async {
     final response = await _api.post('/admin/news', data: body);
     if (response.statusCode != 201 && response.statusCode != 200) {
@@ -25,13 +31,10 @@ class NewsService {
   }
 
   Future<String?> uploadImage(String filePath) async {
-    final form = FormData.fromMap({
-      'file': await MultipartFile.fromFile(filePath, filename: 'upload.jpg'),
-    });
-    final response = await _api.post('/upload', data: form);
-    if (response.statusCode != 200 && response.statusCode != 201) return null;
-    final data = response.data['data'];
-    if (data is Map<String, dynamic>) return data['url'] as String?;
-    return null;
+    return _api.uploadImage(
+      path: '/media/upload',
+      filePath: filePath,
+      filename: 'upload.jpg',
+    );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Family;
 import 'package:dio/dio.dart';
 
 import 'package:tawati_mobile/src/core/providers.dart';
+import 'package:tawati_mobile/src/core/media_url.dart';
 import 'package:tawati_mobile/src/features/news/screens/news_detail_screen.dart';
 
 enum NewsFilter { all, obituary, wedding, announcement, news }
@@ -97,7 +98,7 @@ class _NewsTabState extends ConsumerState<NewsTab> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: NewsFilter.values.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final filter = NewsFilter.values[index];
           final isSelected = _selectedFilter == filter;
@@ -290,7 +291,7 @@ class _NewsTabState extends ConsumerState<NewsTab> {
       case NewsFilter.wedding:
         return subType == 'wedding';
       case NewsFilter.announcement:
-        return type == 'general' || type == 'important' || type == 'admin_alert';
+        return type == 'general' || type == 'important' || type == 'admin_alert' || type == 'platform_announcement';
       case NewsFilter.news:
         return type == 'social_occasion' && subType == 'congratulation';
       default:
@@ -308,6 +309,7 @@ class _NewsTabState extends ConsumerState<NewsTab> {
       case 'general':
       case 'important': return 'إعلان';
       case 'admin_alert': return 'إعلان إداري';
+      case 'platform_announcement': return 'إعلان المنصة';
       case 'social_occasion': return 'مناسبة';
       default: return 'خبر';
     }
@@ -322,14 +324,30 @@ class _NewsTabState extends ConsumerState<NewsTab> {
       case 'admin_alert':
       case 'general': return const Color(0xFF0D9488);
       case 'important': return const Color(0xFFEF4444);
+      case 'platform_announcement': return const Color(0xFF1E40AF);
       default: return const Color(0xFF3B82F6);
     }
+  }
+
+  String _formatCardDate(String raw) {
+    final date = DateTime.tryParse(raw)?.toLocal();
+    if (date == null) return raw;
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    final s = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    return s.split('').map((c) {
+      final i = c.codeUnitAt(0) - 48;
+      return (i >= 0 && i <= 9) ? arabic[i] : c;
+    }).join();
   }
 
   Widget _buildNewsCard(Map<String, dynamic> item) {
     final title = item['title'] as String? ?? '';
     final subtitle = item['subtitle'] as String? ?? item['description'] as String? ?? '';
-    final date = item['created_at'] as String? ?? '';
+    final rawDate = (item['published_at'] as String?) ?? (item['created_at'] as String?) ?? '';
+    final date = _formatCardDate(rawDate);
+    final imageUrl = resolveMediaUrl(item['image'] as String?);
+    final createdBy = item['created_by'];
+    final publisher = createdBy is Map ? (createdBy['full_name'] as String? ?? '') : '';
 
     final label = _typeLabelFor(item);
     final chipColor = _typeColorFor(item);
@@ -344,12 +362,30 @@ class _NewsTabState extends ConsumerState<NewsTab> {
       },
       child: Container(
       margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Padding(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (imageUrl.isNotEmpty)
+            SizedBox(
+              height: 170,
+              width: double.infinity,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return Container(color: const Color(0xFFF1F5F9));
+                },
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
+            ),
+          Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,8 +443,31 @@ class _NewsTabState extends ConsumerState<NewsTab> {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-          ],
+            if (publisher.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.person_outline, size: 14, color: Color(0xFF94A3B8)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      publisher,
+                      style: const TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 12,
+                        color: Color(0xFF94A3B8),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            ],
+          ),
         ),
+        ],
       ),
       ),
     );
