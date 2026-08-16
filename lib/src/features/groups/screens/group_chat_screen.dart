@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
+import 'package:tawati_mobile/src/core/media_url.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/groups/models/group.dart';
 
@@ -18,12 +19,6 @@ const _kFieldBg = Color(0xFFF8FAFC);
 const _kFieldBorder = Color(0xFFE2E8F0);
 const _kNameColor = Color(0xFF1A242B);
 const _kSoftBg = Color(0xFFF1F5F8);
-
-const _kApiBase = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://10.237.182.29:3000/api',
-);
-final String _kOrigin = _kApiBase.replaceFirst('/api', '');
 
 class GroupChatScreen extends ConsumerStatefulWidget {
   final String groupId;
@@ -640,10 +635,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   bool _shouldShowSenderName(GroupMessage message) =>
       message.senderName.trim().isNotEmpty;
 
-  String _resolveImageUrl(String content) {
-    if (content.startsWith('http')) return content;
-    return '$_kOrigin$content';
-  }
+  String _resolveImageUrl(String content) => resolveMediaUrl(content);
 
   Widget _buildMessageBubble(List<GroupMessage> messages, int index) {
     final message = messages[index];

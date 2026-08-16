@@ -25,6 +25,7 @@ class DonationService {
     required String paymentMethodId,
     String? referenceNumber,
     DateTime? transferDate,
+    String? receiptImage,
     bool isAnonymous = false,
   }) async {
     final response = await _api.post('/donations/manual', data: {
@@ -33,9 +34,21 @@ class DonationService {
       'payment_method_id': paymentMethodId,
       'reference_number': referenceNumber,
       'transfer_date': transferDate?.toIso8601String(),
+      'receipt_image': receiptImage,
       'is_anonymous': isAnonymous,
     });
     return Donation.fromJson(response.data['data']);
+  }
+
+  Future<String> uploadReceipt({
+    required String filePath,
+    String? filename,
+  }) async {
+    return _api.uploadImage(
+      path: '/donations/upload-receipt',
+      filePath: filePath,
+      filename: filename,
+    );
   }
 
   Future<List<Donation>> getMyDonations() async {

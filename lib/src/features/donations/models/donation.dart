@@ -13,6 +13,7 @@
   final List<String> availablePaymentMethods;
   final List<PaymentMethod> paymentMethods;
   final int? donorCount;
+  final List<RecentDonation> latestDonations;
 
   Campaign({
     required this.id,
@@ -29,6 +30,7 @@
     required this.availablePaymentMethods,
     this.paymentMethods = const [],
     this.donorCount,
+    this.latestDonations = const [],
   });
 
   factory Campaign.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@
               e.map((k, v) => MapEntry(k.toString(), v)),
             ))
         .toList();
+    final rawLatest = (json['latest_donations'] as List<dynamic>?) ?? const [];
     return Campaign(
       id: json['_id'] ?? json['id'] ?? '',
       fundId: Campaign._id(json['fund_id']),
@@ -59,6 +62,12 @@
               [],
       paymentMethods: methods,
       donorCount: json['donor_count'],
+      latestDonations: rawLatest
+          .whereType<Map>()
+          .map((e) => RecentDonation.fromJson(
+                e.map((k, v) => MapEntry(k.toString(), v)),
+              ))
+          .toList(),
     );
   }
 
@@ -83,6 +92,7 @@
       availablePaymentMethods: availablePaymentMethods,
       paymentMethods: paymentMethods,
       donorCount: donorCount ?? this.donorCount,
+      latestDonations: latestDonations,
     );
   }
 
@@ -93,6 +103,33 @@
 
   double get progress => targetAmount > 0 ? (collectedAmount / targetAmount).clamp(0, 1) : 0;
   bool get isActive => status == 'active';
+}
+
+class RecentDonation {
+  final String donationId;
+  final String? userId;
+  final String userName;
+  final bool isAnonymous;
+  final double amount;
+  final DateTime createdAt;
+
+  RecentDonation({
+    required this.donationId,
+    this.userId,
+    required this.userName,
+    required this.isAnonymous,
+    required this.amount,
+    required this.createdAt,
+  });
+
+  factory RecentDonation.fromJson(Map<String, dynamic> json) => RecentDonation(
+    donationId: json['donation_id'] ?? '',
+    userId: json['user_id'],
+    userName: json['user_name'] ?? 'فاعل خير',
+    isAnonymous: json['is_anonymous'] ?? false,
+    amount: (json['amount'] ?? 0).toDouble(),
+    createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+  );
 }
 
 class Donation {
@@ -151,6 +188,10 @@ class PaymentMethod {
   final String type;
   final String providerKey;
   final String displayNameAr;
+  final String accountNumber;
+  final String accountHolderName;
+  final bool requiresReceipt;
+  final bool requiresTransactionNumber;
   final bool isActive;
   final int sortOrder;
 
@@ -159,6 +200,10 @@ class PaymentMethod {
     required this.type,
     required this.providerKey,
     required this.displayNameAr,
+    this.accountNumber = '',
+    this.accountHolderName = '',
+    this.requiresReceipt = false,
+    this.requiresTransactionNumber = false,
     required this.isActive,
     required this.sortOrder,
   });
@@ -168,7 +213,13 @@ class PaymentMethod {
     type: json['type'] ?? 'manual',
     providerKey: json['provider_key'] ?? '',
     displayNameAr: json['display_name_ar'] ?? '',
+    accountNumber: json['account_number'] ?? '',
+    accountHolderName: json['account_holder_name'] ?? '',
+    requiresReceipt: json['requires_receipt'] ?? false,
+    requiresTransactionNumber: json['requires_transaction_number'] ?? false,
     isActive: json['is_active'] ?? true,
     sortOrder: json['sort_order'] ?? 0,
   );
+
+  bool get isManual => type == 'manual';
 }

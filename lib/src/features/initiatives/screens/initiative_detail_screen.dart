@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
+import 'package:tawati_mobile/src/core/media_url.dart';
 import 'package:tawati_mobile/src/features/initiatives/models/initiative.dart';
 
 class InitiativeDetailScreen extends ConsumerStatefulWidget {
@@ -181,7 +182,6 @@ class _InitiativeDetailScreenState extends ConsumerState<InitiativeDetailScreen>
 
   Widget _buildSliverAppBar(Initiative initiative) {
     final hasImage = initiative.image != null && initiative.image!.isNotEmpty;
-    final baseUrl = 'http://10.237.182.29:3000';
 
     return SliverAppBar(
       expandedHeight: MediaQuery.of(context).size.height * 0.35,
@@ -225,7 +225,7 @@ class _InitiativeDetailScreenState extends ConsumerState<InitiativeDetailScreen>
                 fit: StackFit.expand,
                 children: [
                   Image.network(
-                    '${initiative.image!.startsWith('http') ? '' : baseUrl}$initiative.image',
+                    resolveMediaUrl(initiative.image),
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => _buildHeroGradient(initiative),
                   ),

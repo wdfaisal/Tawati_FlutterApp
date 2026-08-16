@@ -2,11 +2,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:tawati_mobile/src/core/biometric_service.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/family/models/family.dart';
+
+const _kPrimary = Color(0xFF044465);
+const _kMuted = Color(0xFF9CAFB8);
+const _kSecondary = Color(0xFF62707B);
+const _kSurface = Color(0xFFF1F5F8);
+const _kDark = Color(0xFF1A242B);
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -19,12 +24,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _biometricEnabled = false;
   List<FamilyMember> _familyMembers = [];
   bool _familyLoading = true;
+  int _donationsCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadBiometricState();
     _loadFamilyMembers();
+    _loadDonationsCount();
   }
 
   Future<void> _loadBiometricState() async {
@@ -47,6 +54,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } catch (_) {
       if (mounted) setState(() => _familyLoading = false);
+    }
+  }
+
+  Future<void> _loadDonationsCount() async {
+    try {
+      final donations = await ref.read(donationServiceProvider).getMyDonations();
+      if (mounted) setState(() => _donationsCount = donations.length);
+    } catch (_) {
+      // ignore: counts stay at zero when the endpoint is unavailable
     }
   }
 
@@ -75,7 +91,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String _roleLabel(String role) {
     switch (role) {
       case 'head_of_family':
-        return 'رب أسرة';
       case 'family_head':
         return 'رب أسرة';
       case 'super_admin':
@@ -120,101 +135,207 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
 
     final initials = user.fullNameAr.isNotEmpty ? user.fullNameAr[0] : 'ت';
-    final membershipNumber = user.memberNumber ?? '';
-    final membershipLevel = _roleLabel(user.role);
+    final contactLine = (user.email != null && user.email!.isNotEmpty) ? user.email! : user.phone;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(initials, user.fullNameAr, membershipNumber, membershipLevel, user.role),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 8),
-                  _buildInfoCard(user, context),
-                  const SizedBox(height: 24),
-                  _buildFamilyMembersSection(),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('الإعدادات'),
-                  const SizedBox(height: 8),
-                  _ActionTile(
-                    icon: Icons.edit_outlined,
-                    title: 'تعديل الملف الشخصي',
-                    subtitle: 'تحديث بياناتك الشخصية',
-                    onTap: () {},
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          ListView(
+            padding: const EdgeInsets.only(bottom: 120),
+            children: [
+              _buildHeader(user, initials, contactLine),
+              const SizedBox(height: 28),
+              _buildStatsRow(),
+              const SizedBox(height: 28),
+              _buildMenuList(),
+            ],
+          ),
+          Positioned(
+            left: 24,
+            bottom: 24,
+            child: _buildAddFab(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(dynamic user, String initials, String contactLine) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          const SizedBox(height: 36),
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _kSurface, width: 4),
+                  color: _kSurface,
+                ),
+                child: Center(
+                  child: Text(
+                    initials,
+                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 38, fontWeight: FontWeight.w700, color: _kPrimary),
                   ),
-                  _ActionTile(
-                    icon: Icons.lock_outline_rounded,
-                    title: 'تغيير كلمة المرور',
-                    subtitle: 'تحديث الرقم السري',
-                    onTap: () {},
-                  ),
-                  _ActionTile(
-                    icon: Icons.phone_in_talk_outlined,
-                    title: 'تغيير رقم الجوال',
-                    subtitle: 'يتطلب التحقق برمز OTP',
-                    onTap: () {},
-                  ),
-                  SwitchListTile(
-                    title: const Text(
-                      'تسجيل الدخول via البصمة',
-                      style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  onTap: _showSettingsSheet,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _kPrimary,
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
-                    subtitle: Text(
-                      _biometricEnabled ? 'مفعّل' : 'معطّل',
-                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Color(0xFF94A3B8)),
-                    ),
-                    value: _biometricEnabled,
-                    onChanged: _toggleBiometric,
-                    secondary: const Icon(Icons.fingerprint, color: Color(0xFF0D9488)),
-                    activeColor: const Color(0xFF0D9488),
+                    child: const Icon(Icons.add, size: 18, color: Colors.white),
                   ),
-                  const SizedBox(height: 20),
-                  _buildSectionTitle('التنقل'),
-                  const SizedBox(height: 8),
-                  _ActionTile(
-                    icon: Icons.account_tree_outlined,
-                    title: 'شجرة العائلة',
-                    subtitle: 'عرض شجرة عائلتك',
-                    onTap: () => context.go('/family-tree'),
-                  ),
-                  _ActionTile(
-                    icon: Icons.receipt_long_outlined,
-                    title: 'سجل التبرعات',
-                    subtitle: 'عرض تبرعاتك السابقة',
-                    onTap: () => context.go('/donations'),
-                  ),
-                  _ActionTile(
-                    icon: Icons.assignment_outlined,
-                    title: 'استبيان الأفراد',
-                    subtitle: 'إكمال بياناتك الإضافية',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 28),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showLogoutDialog(context, ref),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.error,
-                        side: BorderSide(color: AppColors.error.withOpacity(0.3)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      icon: const Icon(Icons.logout_rounded, size: 20),
-                      label: const Text(
-                        'تسجيل الخروج',
-                        style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            user.fullNameAr,
+            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.w700, color: _kPrimary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          if (contactLine.isNotEmpty)
+            Text(
+              contactLine,
+              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: _kMuted),
+              textAlign: TextAlign.center,
+            ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (user.memberNumber != null && user.memberNumber!.isNotEmpty)
+                _buildInfoPill(user.memberNumber!),
+              if (user.memberNumber != null && user.memberNumber!.isNotEmpty) const SizedBox(width: 8),
+              _buildInfoPill(_roleLabel(user.role)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: _showSettingsSheet,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(50),
+                border: Border.all(color: _kSurface, width: 1.5),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
                 ],
               ),
+              child: const Text(
+                'تعديل الملف الشخصي',
+                style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w500, color: _kPrimary),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoPill(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(color: _kSurface, borderRadius: BorderRadius.circular(20)),
+      child: Text(
+        text,
+        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w500, color: _kSecondary),
+      ),
+    );
+  }
+
+  Widget _buildStatsRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatCard(
+              icon: Icons.campaign_outlined,
+              count: 0,
+              label: 'إعلاناتي',
+              onTap: () => _comingSoon(),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard(
+              icon: Icons.people_alt_outlined,
+              count: 0,
+              label: 'مناسباتي',
+              onTap: () => _comingSoon(),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard(
+              icon: Icons.favorite_outline,
+              count: _donationsCount,
+              label: 'تبرعاتي',
+              onTap: () => context.go('/donations'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required int count,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+        decoration: BoxDecoration(
+          color: _kSurface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
+                ],
+              ),
+              child: Icon(icon, size: 20, color: _kPrimary),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              _toArabicDigits(count),
+              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 17, fontWeight: FontWeight.w600, color: _kPrimary),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kSecondary),
             ),
           ],
         ),
@@ -222,107 +343,145 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildHeader(String initials, String name, String memberNumber, String level, String role) {
-    final isFamilyHead = role == 'head_of_family' || role == 'family_head';
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withOpacity(0.85),
-            const Color(0xFF0F766E),
+  Widget _buildMenuList() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          _buildMenuTile(
+            icon: Icons.person_outline_rounded,
+            title: 'المعلومات الشخصية',
+            onTap: _showPersonalInfoSheet,
+          ),
+          _buildMenuTile(
+            icon: Icons.campaign_outlined,
+            title: 'الإعلانات الخاصة بي',
+            onTap: () => _comingSoon(),
+          ),
+          _buildMenuTile(
+            icon: Icons.people_alt_outlined,
+            title: 'مناسباتي',
+            onTap: () => _comingSoon(),
+          ),
+          _buildMenuTile(
+            icon: Icons.account_tree_outlined,
+            title: 'شجرة العائلة',
+            onTap: () => context.go('/family-tree'),
+          ),
+          _buildMenuTile(
+            icon: Icons.assignment_outlined,
+            title: 'استبيان الأفراد',
+            onTap: () => _comingSoon(),
+          ),
+          _buildMenuTile(
+            icon: Icons.settings_outlined,
+            title: 'الإعدادات',
+            onTap: _showSettingsSheet,
+          ),
+          _buildMenuTile(
+            icon: Icons.support_agent_outlined,
+            title: 'مركز المساعدة',
+            onTap: _showHelpSheet,
+          ),
+          _buildMenuTile(
+            icon: Icons.logout_rounded,
+            title: 'تسجيل الخروج',
+            isDanger: true,
+            onTap: () => _showLogoutDialog(context, ref),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isDanger = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kSurface, width: 1),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2)),
           ],
         ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 96, height: 96,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 3),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 4)),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 46,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      child: Text(initials, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 38, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
-                  ),
-                ],
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isDanger ? const Color(0xFFFEF2F2) : _kSurface,
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(height: 14),
-              Text(name, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-              const SizedBox(height: 8),
-              if (memberNumber.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
-                  child: Text(memberNumber, style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white.withOpacity(0.9), letterSpacing: 0.5)),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isDanger ? const Color(0xFFEF4444) : _kPrimary,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isDanger ? const Color(0xFFEF4444) : _kDark,
                 ),
-              if (memberNumber.isNotEmpty) const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildBadge(level, isFamilyHead),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(color: const Color(0xFF34D399).withOpacity(0.25), borderRadius: BorderRadius.circular(20)),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle, size: 12, color: Color(0xFF6EE7B7)),
-                        SizedBox(width: 4),
-                        Text('نشط', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF6EE7B7))),
-                      ],
-                    ),
-                  ),
-                ],
               ),
-            ],
-          ),
+            ),
+            Icon(Icons.chevron_left,
+              size: 22,
+              color: isDanger ? const Color(0xFFEF4444) : _kMuted,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildBadge(String label, bool isPrimary) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: BoxDecoration(
-        color: isPrimary ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(20),
+  Widget _buildAddFab() {
+    return GestureDetector(
+      onTap: _showAddSheet,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: _kPrimary,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: const Icon(Icons.add, size: 26, color: Colors.white),
       ),
-      child: Text(label, style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white.withOpacity(0.95))),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 4),
-      child: Text(title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+  void _comingSoon() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('قريباً', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
-  Widget _buildInfoCard(dynamic user, BuildContext context) {
+  void _showPersonalInfoSheet() {
+    final authState = ref.read(authProvider);
+    final user = authState.user;
+    if (user == null) return;
+
     final items = <MapEntry<String, String>>[
       if (user.phone.isNotEmpty) MapEntry('رقم الجوال', user.phone),
       if (user.email != null && user.email!.isNotEmpty) MapEntry('البريد الإلكتروني', user.email!),
@@ -332,48 +491,338 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (user.dateOfBirth != null) MapEntry('تاريخ الميلاد', _formatDate(user.dateOfBirth!)),
     ];
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.person_outline_rounded, color: AppColors.primary, size: 20),
-                ),
-                const SizedBox(width: 12),
-                const Text('البيانات الشخصية', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              ],
-            ),
-            const Divider(height: 24),
-            ...items.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Row(
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: SingleChildScrollView(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 100,
-                    child: Text(item.key, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary)),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'المعلومات الشخصية',
+                          style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 17, fontWeight: FontWeight.w700, color: _kPrimary),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: _kMuted),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: Text(item.value, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary), textAlign: TextAlign.right),
+                  const SizedBox(height: 8),
+                  ...items.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 110,
+                            child: Text(item.key, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: _kMuted)),
+                          ),
+                          Expanded(
+                            child: Text(
+                              item.value,
+                              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: _kDark),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 8),
+                  _buildFamilyMembersBlock(),
                 ],
               ),
-            )),
-          ],
+            ),
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFamilyMembersBlock() {
+    if (_familyLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+    if (_familyMembers.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 28, color: _kSurface),
+        const Text(
+          'أفراد العائلة',
+          style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15, fontWeight: FontWeight.w700, color: _kDark),
+        ),
+        const SizedBox(height: 8),
+        ..._familyMembers.map(
+          (member) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: _kSurface,
+                  child: Text(
+                    member.fullNameAr.isNotEmpty ? member.fullNameAr[0] : '?',
+                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w700, color: _kPrimary),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        member.fullNameAr,
+                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: _kDark),
+                      ),
+                      Text(
+                        _familyMemberRoleLabel(member.role),
+                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted),
+                      ),
+                    ],
+                  ),
+                ),
+                if (member.relation != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: _kSurface, borderRadius: BorderRadius.circular(10)),
+                    child: Text(
+                      member.relation!,
+                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: _kPrimary, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showSettingsSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'الإعدادات',
+                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 17, fontWeight: FontWeight.w700, color: _kPrimary),
+                ),
+                const SizedBox(height: 12),
+                _buildSheetTile(
+                  icon: Icons.edit_outlined,
+                  title: 'تعديل الملف الشخصي',
+                  subtitle: 'تحديث بياناتك الشخصية',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _comingSoon();
+                  },
+                ),
+                _buildSheetTile(
+                  icon: Icons.lock_outline_rounded,
+                  title: 'تغيير كلمة المرور',
+                  subtitle: 'تحديث الرقم السري',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _comingSoon();
+                  },
+                ),
+                _buildSheetTile(
+                  icon: Icons.phone_in_talk_outlined,
+                  title: 'تغيير رقم الجوال',
+                  subtitle: 'يتطلب التحقق برمز OTP',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _comingSoon();
+                  },
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: SwitchListTile(
+                    title: const Text(
+                      'تسجيل الدخول بالبصمة',
+                      style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: _kDark),
+                    ),
+                    subtitle: Text(
+                      _biometricEnabled ? 'مفعّل' : 'معطّل',
+                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted),
+                    ),
+                    secondary: const Icon(Icons.fingerprint, color: _kPrimary),
+                    activeThumbColor: _kPrimary,
+                    value: _biometricEnabled,
+                    onChanged: (value) {
+                      Navigator.of(ctx).pop();
+                      _toggleBiometric(value);
+                    },
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showHelpSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'مركز المساعدة',
+                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 17, fontWeight: FontWeight.w700, color: _kPrimary),
+                ),
+                const SizedBox(height: 12),
+                _buildSheetTile(
+                  icon: Icons.email_outlined,
+                  title: 'تواصل معنا',
+                  subtitle: 'مراسلة فريق الدعم',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _comingSoon();
+                  },
+                ),
+                _buildSheetTile(
+                  icon: Icons.question_answer_outlined,
+                  title: 'الأسئلة الشائعة',
+                  subtitle: 'إجابات عن الاستفسارات المتكررة',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _comingSoon();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'إضافة محتوى',
+                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 17, fontWeight: FontWeight.w700, color: _kPrimary),
+                ),
+                const SizedBox(height: 12),
+                _buildSheetTile(
+                  icon: Icons.campaign_outlined,
+                  title: 'إعلان جديد',
+                  subtitle: 'نشر إعلان لأفراد العائلة',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    context.push('/add-announcement');
+                  },
+                ),
+                _buildSheetTile(
+                  icon: Icons.bed_outlined,
+                  title: 'خبر وفاء',
+                  subtitle: 'نشر نعي لفقيد من العائلة',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    context.push('/add-obituary');
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSheetTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 20, color: _kPrimary),
+        ),
+        title: Text(title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: _kDark)),
+        subtitle: Text(subtitle, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted)),
+        trailing: const Icon(Icons.chevron_left, size: 22, color: _kMuted),
+        onTap: onTap,
       ),
     );
   }
@@ -400,105 +849,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildFamilyMembersSection() {
-    if (_familyLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_familyMembers.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('أفراد العائلة'),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.border.withOpacity(0.5)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.people_outline_rounded, color: AppColors.primary, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '${_familyMembers.length} أفراد',
-                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                ..._familyMembers.map((member) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: AppColors.primaryLight,
-                        child: Text(
-                          member.fullNameAr.isNotEmpty ? member.fullNameAr[0] : '?',
-                          style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              member.fullNameAr,
-                              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                            ),
-                            Text(
-                              _familyMemberRoleLabel(member.role),
-                              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (member.relation != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(10)),
-                          child: Text(
-                            member.relation!,
-                            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                    ],
-                  ),
-                )),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   String _familyMemberRoleLabel(String role) {
     switch (role) {
       case 'head_of_family':
       case 'family_head':
         return 'رب أسرة';
-      case 'family_member':
-        return 'عضو';
       default:
         return 'عضو';
     }
+  }
+
+  String _toArabicDigits(num value) {
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    return value.toString().split('').map((c) {
+      final i = c.codeUnitAt(0) - 48;
+      return (i >= 0 && i <= 9) ? arabic[i] : c;
+    }).join();
   }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
@@ -525,48 +891,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _ActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withOpacity(0.4)),
-      ),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, color: AppColors.primary, size: 20),
-        ),
-        title: Text(title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-        subtitle: Text(subtitle, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textHint)),
-        trailing: Container(
-          padding: const EdgeInsets.all(4),
-          child: Icon(Icons.chevron_left, color: AppColors.textHint.withOpacity(0.6), size: 22),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        onTap: onTap,
       ),
     );
   }

@@ -1,12 +1,25 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:io';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:flutter_stripe/flutter_stripe.dart' hide PaymentMethod;
+import 'package:image_picker/image_picker.dart';
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
+import 'package:tawati_mobile/src/core/media_url.dart';
 import 'package:tawati_mobile/src/features/donations/models/donation.dart';
+import 'package:tawati_mobile/src/features/donations/widgets/payment_result_dialog.dart';
+
+const _kPrimary = Color(0xFF044465);
+const _kMuted = Color(0xFF9CAFB8);
+const _kParagraph = Color(0xFF62707B);
+const _kDark = Color(0xFF1A242B);
+const _kSurface = Color(0xFFF1F5F8);
+const _kBorder = Color(0xFFF1F5F8);
+const _kCardBorder = Color(0x1A9CAFB8);
 
 class CampaignDetailScreen extends ConsumerStatefulWidget {
   final String campaignId;
@@ -85,9 +98,10 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.surface,
+        backgroundColor: Colors.white,
+        appBar: _buildAppBar(),
         body: _loading
-            ? skeletonDetailPage(context)
+            ? _buildLoading()
             : _error != null
                 ? _buildError()
                 : _buildContent(),
@@ -98,32 +112,146 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
     );
   }
 
-  Widget _buildError() {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('تفاصيل الحملة', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: AppColors.textHint),
-            const SizedBox(height: 12),
-            const Text(
-              'حدث خطأ، يرجى المحاولة مرة أخرى',
-              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 12),
-            TextButton.icon(
-              onPressed: _loadDetail,
-              icon: const Icon(Icons.refresh),
-              label: const Text('إعادة المحاولة', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
-            ),
-          ],
+  PreferredSizeWidget _buildAppBar() {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(64),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.92),
+          border: Border(bottom: BorderSide(color: _kBorder)),
         ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Image.asset(
+                  'assets/images/splash_logo.png',
+                  height: 32,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const SizedBox(width: 80),
+                ),
+                const Expanded(
+                  child: Center(
+                    child: Text(
+                      'تفاصيل الحملة',
+                      style: TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: _kPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: _kSurface,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: _kPrimary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: _kMuted),
+          const SizedBox(height: 12),
+          const Text(
+            'حدث خطأ، يرجى المحاولة مرة أخرى',
+            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: _kParagraph),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: _loadDetail,
+            icon: const Icon(Icons.refresh),
+            label: const Text('إعادة المحاولة', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoading() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          skeletonBox(height: 240, borderRadius: 0, margin: EdgeInsets.zero),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Transform.translate(
+              offset: const Offset(0, -56),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    skeletonLine(width: 180, height: 18, margin: EdgeInsets.zero),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              skeletonLine(width: 60, height: 12, margin: EdgeInsets.zero),
+                              const SizedBox(height: 8),
+                              skeletonLine(width: 120, height: 22, margin: EdgeInsets.zero),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              skeletonLine(width: 80, height: 12, margin: EdgeInsets.zero),
+                              const SizedBox(height: 8),
+                              skeletonLine(width: 120, height: 20, margin: EdgeInsets.zero),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    skeletonLine(height: 12, borderRadius: 6, margin: EdgeInsets.zero),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        skeletonCircle(size: 36),
+                        const SizedBox(width: 10),
+                        Expanded(child: skeletonLine(height: 12, margin: EdgeInsets.zero)),
+                        const SizedBox(width: 16),
+                        skeletonCircle(size: 36),
+                        const SizedBox(width: 10),
+                        Expanded(child: skeletonLine(height: 12, margin: EdgeInsets.zero)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -131,226 +259,117 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
   Widget _buildContent() {
     final campaign = _campaign!;
     final fmt = NumberFormat('#,##0');
-    final progress = campaign.progress;
-    final percent = (progress * 100).toInt();
+    final percent = (campaign.progress * 100).toInt();
 
-    return CustomScrollView(
-      slivers: [
-        _buildSliverAppBar(campaign),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                const SizedBox(height: 16),
-                _buildProgressCard(campaign, fmt, percent),
-                const SizedBox(height: 16),
-                _buildAboutSection(campaign),
-                const SizedBox(height: 16),
-                _buildRecentDonors(),
-                const SizedBox(height: 24),
-              ],
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHero(campaign),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Transform.translate(
+              offset: const Offset(0, -56),
+              child: _buildProgressCard(campaign, fmt, percent),
             ),
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            child: _buildAboutSection(campaign),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+            child: _buildRecentDonors(campaign),
+          ),
+          const SizedBox(height: 32),
+        ],
+      ),
     );
   }
 
-  Widget _buildSliverAppBar(Campaign campaign) {
+  Widget _buildHero(Campaign campaign) {
     final hasImage = campaign.image != null && campaign.image!.isNotEmpty;
-    final baseUrl = 'http://10.237.182.29:3000';
 
-    return SliverAppBar(
-      expandedHeight: MediaQuery.of(context).size.height * 0.35,
-      pinned: true,
-      stretch: true,
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
-      leading: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.25),
-              shape: BoxShape.circle,
+    return SizedBox(
+      height: 240,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (hasImage)
+            Image.network(
+              resolveMediaUrl(campaign.image),
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _heroFallback(),
             ),
-            child: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.25),
-                shape: BoxShape.circle,
+          if (!hasImage) _heroFallback(),
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x66000000), Color(0x00000000)],
               ),
-              child: const Icon(Icons.share_outlined, size: 18),
             ),
-            onPressed: () {},
           ),
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: hasImage
-            ? Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(
-                    '${campaign.image!.startsWith('http') ? '' : baseUrl}$campaign.image',
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _buildHeroGradient(campaign),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.65),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 24,
-                    right: 16,
-                    left: 16,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            'حملة تبرع',
-                            style: TextStyle(
-                              fontFamily: 'IBMPlexSansArabic',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          campaign.title,
-                          style: const TextStyle(
-                            fontFamily: 'IBMPlexSansArabic',
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        if (campaign.fundName != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            campaign.fundName!,
-                            style: const TextStyle(
-                              fontFamily: 'IBMPlexSansArabic',
-                              fontSize: 13,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              )
-            : _buildHeroGradient(campaign),
+        ],
       ),
     );
   }
 
-  Widget _buildHeroGradient(Campaign campaign) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [AppColors.primary, AppColors.primaryDark],
-            ),
-          ),
+  Widget _heroFallback() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [_kPrimary, Color(0xFF02304A)],
         ),
-        Positioned(
-          top: -60, right: -60,
-          child: Container(
-            width: 180, height: 180,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -40, left: -40,
-          child: Container(
-            width: 140, height: 140,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 24, right: 24, left: 24,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'حملة تبرع',
-                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                campaign.title,
-                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              if (campaign.fundName != null) ...[
-                const SizedBox(height: 4),
-                Text(campaign.fundName!, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: Colors.white70)),
-              ],
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildProgressCard(Campaign campaign, NumberFormat fmt, int percent) {
     final progress = campaign.progress;
+    final remaining = campaign.targetAmount - campaign.collectedAmount;
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: const Color(0xFF044465).withValues(alpha: 0.08),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            campaign.title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'IBMPlexSansArabic',
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: _kDark,
+            ),
+          ),
+          if (campaign.fundName != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              campaign.fundName!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted),
+            ),
+          ],
+          const SizedBox(height: 20),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -358,50 +377,62 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('المبلغ المجموع', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary)),
-                    const SizedBox(height: 4),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(fmt.format(campaign.collectedAmount), style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                        const SizedBox(width: 4),
-                        Text('ج.س', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary)),
-                      ],
+                    const Text('تم جمع', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted)),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${fmt.format(campaign.collectedAmount)} ج.س',
+                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.w700, color: _kPrimary),
                     ),
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('الهدف', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary)),
-                  const SizedBox(height: 4),
-                  Text('${fmt.format(campaign.targetAmount)} ج.س', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text('المبلغ المستهدف', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted)),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${fmt.format(campaign.targetAmount)} ج.س',
+                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 18, fontWeight: FontWeight.w700, color: _kPrimary),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: AppColors.primaryLight,
-              valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-              minHeight: 10,
+              minHeight: 12,
+              backgroundColor: _kSurface,
+              valueColor: const AlwaysStoppedAnimation(_kPrimary),
             ),
           ),
-          const SizedBox(height: 6),
-          Row(children: [Text('%$percent من الهدف المكتمل', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary))]),
-          const SizedBox(height: 16),
-          Container(height: 1, color: AppColors.border),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Row(
             children: [
-              _buildStatItem(Icons.groups_outlined, 'عدد المتبرعين', '${campaign.donorCount ?? 0}'),
+              Text(
+                'متبقي ${fmt.format(remaining < 0 ? 0 : remaining)} ج.س',
+                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted),
+              ),
               const Spacer(),
-              _buildStatItem(Icons.schedule_outlined, 'الأيام المتبقية', campaign.isActive ? '30 يوم' : 'منتهية'),
+              Text(
+                '$percent% اكتمل',
+                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(height: 1, color: _kBorder),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              _buildStatItem(Icons.groups_outlined, 'عدد المتبرعين', _toArabicDigits(campaign.donorCount ?? 0)),
+              const Spacer(),
+              _buildStatItem(Icons.schedule_outlined, 'الأيام المتبقية', _daysLeftLabel(campaign)),
             ],
           ),
         ],
@@ -413,20 +444,18 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
     return Row(
       children: [
         Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 18, color: AppColors.primary),
+          width: 36,
+          height: 36,
+          decoration: const BoxDecoration(color: _kSurface, shape: BoxShape.circle),
+          child: Icon(icon, size: 18, color: _kPrimary),
         ),
         const SizedBox(width: 10),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: AppColors.textSecondary)),
+            Text(label, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: _kMuted)),
             const SizedBox(height: 2),
-            Text(value, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            Text(value, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w700, color: _kDark)),
           ],
         ),
       ],
@@ -434,131 +463,210 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
   }
 
   Widget _buildAboutSection(Campaign campaign) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 4, height: 20,
-                decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2)),
-              ),
-              const SizedBox(width: 10),
-              const Text('عن الحملة', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            campaign.description ?? 'لا يوجد وصف',
-            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary, height: 1.7),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text('حول الحملة', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, color: _kPrimary)),
+            const SizedBox(width: 8),
+            Container(
+              width: 6,
+              height: 24,
+              decoration: BoxDecoration(color: _kPrimary, borderRadius: BorderRadius.circular(999)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          campaign.description ?? 'لا يوجد وصف',
+          style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: _kParagraph, height: 1.8),
+        ),
+      ],
     );
   }
 
-  Widget _buildRecentDonors() {
-    final donors = [
-      {'name': 'فاعل خير', 'amount': '500', 'time': 'منذ 15 دقيقة', 'isKnown': false},
-      {'name': 'أحمد محمد آل سعيد', 'amount': '1,200', 'time': 'منذ ساعة', 'isKnown': true},
-      {'name': 'فاعل خير', 'amount': '100', 'time': 'منذ 3 ساعات', 'isKnown': false},
-    ];
+  Widget _buildRecentDonors(Campaign campaign) {
+    final donations = campaign.latestDonations;
+    final fmt = NumberFormat('#,##0');
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('آخر المساهمات', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 16),
-          ...donors.map((d) => _buildDonorItem(d['name'] as String, d['amount'] as String, d['time'] as String, d['isKnown'] as bool)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDonorItem(String name, String amount, String time, bool isKnown) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: isKnown ? AppColors.primaryLight : AppColors.border,
-            child: Icon(Icons.person, size: 16, color: isKnown ? AppColors.primary : AppColors.textHint),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text('آخر المساهمات', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, color: _kPrimary)),
+            const SizedBox(width: 8),
+            Container(
+              width: 6,
+              height: 24,
+              decoration: BoxDecoration(color: _kPrimary, borderRadius: BorderRadius.circular(999)),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => _showComingSoon(),
+              child: const Text('عرض الكل', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (donations.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _kBorder),
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                Text(time, style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: AppColors.textHint)),
+                const Icon(Icons.handshake_outlined, size: 40, color: _kMuted),
+                const SizedBox(height: 8),
+                const Text('لا توجد مساهمات بعد، كن أول المتبرعين', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: _kParagraph)),
               ],
             ),
+          )
+        else
+          ...donations.asMap().entries.map(
+                (e) => _buildDonorItem(e.key, e.value, fmt),
+              ),
+      ],
+    );
+  }
+
+  Widget _buildDonorItem(int index, RecentDonation donation, NumberFormat fmt) {
+    final isFirst = index == 0;
+    final name = donation.isAnonymous ? 'فاعل خير' : donation.userName;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: isFirst ? _kSurface : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isFirst ? _kCardBorder : _kBorder),
+      ),
+      child: Row(
+        children: [
+          Text(
+            '${fmt.format(donation.amount)} ج.س',
+            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w700, color: _kPrimary),
           ),
-          Text('$amount ج.س', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+          const Spacer(),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(name, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kDark)),
+              const SizedBox(height: 2),
+              Text(_timeAgo(donation.createdAt), style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kMuted)),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _kSurface,
+              shape: BoxShape.circle,
+              border: Border.all(color: isFirst ? Colors.white : _kSurface, width: 2),
+            ),
+            child: Icon(Icons.person, size: 20, color: _kPrimary),
+          ),
         ],
+      ),
+    );
+  }
+
+  String _daysLeftLabel(Campaign campaign) {
+    final end = campaign.endDate;
+    if (!campaign.isActive || end == null) return 'منتهية';
+    final days = end.difference(DateTime.now()).inDays;
+    if (days < 0) return 'منتهية';
+    if (days == 0) return 'آخر يوم';
+    if (days == 1) return 'يوم واحد';
+    return '${_toArabicDigits(days)} يوم';
+  }
+
+  String _timeAgo(DateTime dateTime) {
+    final diff = DateTime.now().difference(dateTime);
+    if (diff.inMinutes < 1) return 'الآن';
+    if (diff.inMinutes < 60) return 'منذ ${_toArabicDigits(diff.inMinutes)} دقيقة';
+    if (diff.inHours < 24) return 'منذ ${_toArabicDigits(diff.inHours)} ساعة';
+    if (diff.inDays < 7) return 'منذ ${_toArabicDigits(diff.inDays)} يوم';
+    return 'منذ ${_toArabicDigits((diff.inDays / 30).floor())} شهر';
+  }
+
+  String _toArabicDigits(num value) {
+    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    return value.toString().split('').map((c) {
+      final index = int.tryParse(c);
+      return index == null ? c : arabic[index];
+    }).join();
+  }
+
+  void _showComingSoon() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('قريباً', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
   Widget _buildBottomCta() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
+        color: Colors.white.withValues(alpha: 0.8),
+        border: Border(top: BorderSide(color: _kBorder)),
       ),
       child: SafeArea(
         top: false,
         child: Row(
           children: [
             Expanded(
-              flex: 3,
-              child: ElevatedButton.icon(
-                onPressed: () => _showDonateDialog(),
-                icon: const Icon(Icons.favorite, size: 18),
-                label: const Text('تبرع الآن', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 4,
-                  shadowColor: AppColors.primary.withValues(alpha: 0.3),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+              child: GestureDetector(
+                onTap: () => _showDonateDialog(),
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: _kPrimary,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF044465).withValues(alpha: 0.2),
+                        blurRadius: 15,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add, size: 20, color: Colors.white),
+                      SizedBox(width: 12),
+                      Text(
+                        'تبرع الآن',
+                        style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, color: Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Container(
-              width: 52, height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.primaryLight),
-              ),
-              child: IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.favorite_border, color: AppColors.primary, size: 22),
+            const SizedBox(width: 16),
+            GestureDetector(
+              onTap: () => _showComingSoon(),
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: _kSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0x339CAFB8)),
+                ),
+                child: const Icon(Icons.share_outlined, size: 24, color: _kMuted),
               ),
             ),
           ],
@@ -567,8 +675,8 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
     );
   }
 
-  void _showDonateDialog() {
-    showModalBottomSheet(
+  Future<void> _showDonateDialog() async {
+    final result = await showModalBottomSheet<({bool manual, bool anonymous, double amount})>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -578,6 +686,28 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
         campaign: _campaign!,
       ),
     );
+    if (result == null || !mounted) return;
+    final fmt = NumberFormat('#,##0');
+    final amountText = '${fmt.format(result.amount)} ج.س';
+    if (result.manual) {
+      await showPaymentResultDialog(
+        context,
+        type: PaymentResultType.underReview,
+        title: 'عملية التبرع قيد المراجعة',
+        subtitle: 'تم استلام طلبك بنجاح، وسيقوم فريق الإدارة بمراجعته وتأكيده خلال وقت قصير. ستصلك إشعارات فور تأكيد التبرع.',
+        amountText: amountText,
+      );
+    } else {
+      await showPaymentResultDialog(
+        context,
+        type: PaymentResultType.success,
+        title: 'تم تأكيد تبرعك بنجاح',
+        subtitle: result.anonymous
+            ? 'شكراً لك على مساهمتك، ستظهر مساهمتك باسم فاعل خير في سجل المساهمات.'
+            : 'شكراً لك على مساهمتك، سيظهر اسمك في سجل المساهمات.',
+        amountText: amountText,
+      );
+    }
   }
 }
 
@@ -596,52 +726,84 @@ class DonationBottomSheet extends ConsumerStatefulWidget {
 
 class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
   final _amountController = TextEditingController();
+  final _transactionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _isManual = true;
+  PaymentMethod? _selectedMethod;
+  bool _anonymous = false;
   bool _submitting = false;
+  String? _receiptPath;
 
-  List<PaymentMethod> get _manualMethods =>
-      widget.campaign.paymentMethods.where((m) => m.type == 'manual').toList();
-
-  bool get _stripeAvailable =>
-      widget.campaign.paymentMethods
-          .any((m) => m.type == 'automatic' && m.providerKey == 'stripe');
+  @override
+  void initState() {
+    super.initState();
+    final methods = widget.campaign.paymentMethods;
+    PaymentMethod? firstManual;
+    for (final method in methods) {
+      if (method.type == 'manual') {
+        firstManual = method;
+        break;
+      }
+    }
+    _selectedMethod = firstManual ?? (methods.isEmpty ? null : methods.first);
+  }
 
   @override
   void dispose() {
     _amountController.dispose();
+    _transactionController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final method = _selectedMethod;
+    if (method == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا توجد طرق دفع متاحة لهذه الحملة', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (method.type == 'manual' && method.requiresReceipt && _receiptPath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى إرفاق إشعار الدفع لإتمام التبرع', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
     try {
       final amount = double.parse(_amountController.text);
 
-      if (_isManual) {
-        final manualMethods = _manualMethods;
-        if (manualMethods.isEmpty) {
-          if (mounted) {
-            setState(() => _submitting = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('لا توجد طريقة دفع يدوية متاحة لهذه الحملة', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-          return;
+      if (method.type == 'manual') {
+        String? referenceNumber;
+        String? receiptImage;
+        final txNumber = _transactionController.text.trim();
+        if (method.requiresTransactionNumber && txNumber.isNotEmpty) {
+          referenceNumber = txNumber;
+        }
+        if (method.requiresReceipt) {
+          receiptImage = await ref
+              .read(donationServiceProvider)
+              .uploadReceipt(filePath: _receiptPath!);
         }
         await ref.read(donationServiceProvider).createManualDonation(
               campaignId: widget.campaign.id,
               amount: amount,
-              paymentMethodId: manualMethods.first.id,
+              paymentMethodId: method.id,
+              referenceNumber: referenceNumber,
+              receiptImage: receiptImage,
+              isAnonymous: _anonymous,
             );
         if (mounted) {
-          Navigator.of(context).pop();
-          _showSuccessDialog(true);
+          Navigator.of(context).pop((manual: true, anonymous: _anonymous, amount: amount));
         }
       } else {
         await _handleStripePayment(amount);
@@ -675,6 +837,7 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
     final response = await apiClient.post('/payments/stripe/create-intent', data: {
       'campaign_id': widget.campaign.id,
       'amount': amount,
+      'is_anonymous': _anonymous,
     });
     final clientSecret = response.data['data']['clientSecret'] as String;
 
@@ -690,30 +853,8 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
     await Stripe.instance.confirmPaymentSheetPayment();
 
     if (mounted) {
-      Navigator.of(context).pop();
-      _showSuccessDialog(false);
+      Navigator.of(context).pop((manual: false, anonymous: _anonymous, amount: amount));
     }
-  }
-
-  void _showSuccessDialog(bool isManual) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('تم التسجيل', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
-        content: Text(
-          isManual
-              ? 'شكراً لك! تم تسجيل تبرعك وسيتم مراجعته من قبل الإدارة.'
-              : 'شكراً لك! تم تأكيد تبرعك بنجاح.',
-          style: const TextStyle(fontFamily: 'IBMPlexSansArabic'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('حسناً', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -779,79 +920,25 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
               const SizedBox(height: 16),
               const Text('طريقة الدفع', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _isManual = true),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: _isManual ? AppColors.primaryLight : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _isManual ? AppColors.primary : AppColors.border, width: _isManual ? 2 : 1),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.account_balance_outlined, color: _isManual ? AppColors.primary : AppColors.textHint),
-                            const SizedBox(height: 8),
-                            Text('تحويل يدوي', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: _isManual ? AppColors.primary : AppColors.textSecondary)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (_stripeAvailable) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _isManual = false),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: !_isManual ? AppColors.primaryLight : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: !_isManual ? AppColors.primary : AppColors.border, width: !_isManual ? 2 : 1),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(Icons.credit_card_outlined, color: !_isManual ? AppColors.primary : AppColors.textHint),
-                              const SizedBox(height: 8),
-                              Text('Stripe', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: !_isManual ? AppColors.primary : AppColors.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+              _PaymentMethodPicker(
+                methods: widget.campaign.paymentMethods,
+                selected: _selectedMethod,
+                onChanged: (method) => setState(() => _selectedMethod = method),
               ),
-              if (_isManual) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: AppColors.primaryLight.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(12)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('أرقام الحسابات للتحويل:', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                      const SizedBox(height: 8),
-                      _buildAccountRow('البنك الأهلي', 'SA00 0000 0000 0000 0000'),
-                      const SizedBox(height: 4),
-                      _buildAccountRow('بنك الراجحي', 'SA00 0000 0000 0000 0000'),
-                      const SizedBox(height: 8),
-                      const Text('ملاحظة: يتم مراجعة التحويلات يدوياً من قبل الإدارة', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: AppColors.textSecondary)),
-                    ],
-                  ),
-                ),
-              ] else ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: AppColors.primaryLight.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(12)),
-                  child: const Text('سيتم توجيهك لصفحة الدفع الآمن عبر Stripe. يتم تأكيد التبرع فوراً.', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary)),
-                ),
+              const SizedBox(height: 12),
+              _buildMethodInfoBox(),
+              if (_selectedMethod?.type == 'manual' &&
+                  _selectedMethod!.requiresTransactionNumber) ...[
+                const SizedBox(height: 12),
+                _buildTransactionField(),
               ],
+              if (_selectedMethod?.type == 'manual' &&
+                  _selectedMethod!.requiresReceipt) ...[
+                const SizedBox(height: 12),
+                _buildReceiptPicker(),
+              ],
+              const SizedBox(height: 16),
+              _buildAnonymousToggle(),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -869,15 +956,333 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
     );
   }
 
-  Widget _buildAccountRow(String bankName, String accountNumber) {
-    return Row(
-      children: [
-        const Icon(Icons.account_balance, size: 16, color: AppColors.primary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text('$bankName: $accountNumber', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textPrimary)),
+  Widget _buildMethodInfoBox() {
+    final method = _selectedMethod;
+    if (method == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.warning.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
         ),
-      ],
+        child: const Text(
+          'لا توجد طرق دفع متاحة لهذه الحملة حالياً',
+          style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.warning),
+        ),
+      );
+    }
+    final isManual = method.type == 'manual';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            isManual ? Icons.account_balance_outlined : Icons.bolt_outlined,
+            size: 18,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  method.displayNameAr,
+                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                ),
+                if (isManual && method.accountHolderName.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'اسم صاحب الحساب: ${method.accountHolderName}',
+                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textPrimary),
+                  ),
+                ],
+                if (isManual && method.accountNumber.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'رقم الحساب: ${method.accountNumber}',
+                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+                    textDirection: TextDirection.ltr,
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Text(
+                  isManual
+                      ? 'قم بالتحويل عبر هذه الطريقة وسيتم مراجعة التبرع وتأكيده من قبل الإدارة خلال وقت قصير.'
+                      : 'سيتم توجيهك لصفحة الدفع الآمن، ويتم تأكيد التبرع فوراً.',
+                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionField() {
+    return TextFormField(
+      controller: _transactionController,
+      keyboardType: TextInputType.text,
+      decoration: const InputDecoration(
+        labelText: 'رقم العملية',
+        hintText: 'أدخل رقم العملية الخاص بالتحويل',
+        prefixIcon: Icon(Icons.numbers),
+      ),
+      style: const TextStyle(fontFamily: 'IBMPlexSansArabic'),
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) return 'يرجى إدخال رقم العملية';
+        return null;
+      },
+    );
+  }
+
+  Widget _buildReceiptPicker() {
+    final path = _receiptPath;
+    return GestureDetector(
+      onTap: _pickReceipt,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: path == null ? AppColors.primary : AppColors.success,
+            width: path == null ? 1.5 : 1,
+          ),
+        ),
+        child: path == null
+            ? Row(
+                children: [
+                  const Icon(Icons.receipt_long_outlined, size: 22, color: AppColors.primary),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('إرفاق إشعار الدفع', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                        SizedBox(height: 2),
+                        Text('اضغط لاختيار صورة إشعار الدفع', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.add_photo_alternate_outlined, color: AppColors.textHint),
+                ],
+              )
+            : Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(path),
+                      width: 52,
+                      height: 52,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('تم إرفاق إشعار الدفع', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.success)),
+                        SizedBox(height: 2),
+                        Text('اضغط لتغيير الصورة', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => setState(() => _receiptPath = null),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Icon(Icons.close, size: 18, color: AppColors.textHint),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Future<void> _pickReceipt() async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (file == null || !mounted) return;
+    setState(() => _receiptPath = file.path);
+  }
+
+  Widget _buildAnonymousToggle() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.visibility_off_outlined, size: 20, color: AppColors.primary),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('إخفاء اسمي', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                Text('سيظهر اسمك في سجل المساهمات باسم فاعل خير', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: AppColors.textSecondary)),
+              ],
+            ),
+          ),
+          Switch(
+            value: _anonymous,
+            activeThumbColor: AppColors.primary,
+            activeTrackColor: AppColors.primary.withValues(alpha: 0.35),
+            onChanged: (value) => setState(() => _anonymous = value),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentMethodPicker extends StatelessWidget {
+  final List<PaymentMethod> methods;
+  final PaymentMethod? selected;
+  final ValueChanged<PaymentMethod> onChanged;
+
+  const _PaymentMethodPicker({
+    required this.methods,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final current = selected;
+    return GestureDetector(
+      onTap: () => _openPicker(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Icon(_iconFor(current), size: 20, color: AppColors.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                current?.displayNameAr ?? 'اختر طريقة الدفع',
+                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _iconFor(PaymentMethod? method) {
+    if (method == null) return Icons.help_outline;
+    return method.type == 'manual'
+        ? Icons.account_balance_outlined
+        : Icons.credit_card_outlined;
+  }
+
+  void _openPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Text(
+                  'اختر طريقة الدفع',
+                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                ),
+              ),
+              ...methods.map((method) {
+                final isSelected = method.id == selected?.id;
+                return InkWell(
+                  onTap: () {
+                    onChanged(method);
+                    Navigator.of(sheetContext).pop();
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primaryLight.withValues(alpha: 0.6) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isSelected ? AppColors.primary : AppColors.border, width: isSelected ? 1.5 : 1),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primary : AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            _iconFor(method),
+                            size: 20,
+                            color: isSelected ? Colors.white : AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                method.displayNameAr,
+                                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                method.type == 'manual'
+                                    ? 'تحويل يدوي يُراجع من الإدارة'
+                                    : 'دفع إلكتروني فوري',
+                                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          const Icon(Icons.check_circle, color: AppColors.primary, size: 20)
+                        else
+                          Icon(Icons.circle_outlined, color: AppColors.textHint, size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
     );
   }
 }

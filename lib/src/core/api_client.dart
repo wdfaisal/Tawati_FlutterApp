@@ -118,4 +118,27 @@ class ApiClient {
       _dio.put(path, data: data);
 
   Future<Response> delete(String path) => _dio.delete(path);
+
+  Future<String> uploadImage({
+    required String path,
+    String? filePath,
+    List<int>? bytes,
+    String? filename,
+  }) async {
+    final MultipartFile file;
+    if (filePath != null && filePath.isNotEmpty) {
+      file = await MultipartFile.fromFile(filePath, filename: filename);
+    } else {
+      file = MultipartFile.fromBytes(
+        bytes ?? const [],
+        filename: filename ?? 'receipt.jpg',
+      );
+    }
+    final response = await _dio.post(
+      path,
+      data: FormData.fromMap({'file': file}),
+      options: Options(contentType: 'multipart/form-data'),
+    );
+    return response.data['data']['url'] as String;
+  }
 }

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
+import 'package:tawati_mobile/src/core/media_url.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/groups/models/group.dart';
 import 'package:tawati_mobile/src/features/news/models/news.dart';
@@ -554,7 +555,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
             decoration: const BoxDecoration(color: _kSoftBg, shape: BoxShape.circle),
             child: (image != null && image.isNotEmpty)
                 ? Image.network(
-                    image,
+                    resolveMediaUrl(image),
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => _initialsAvatar(group),
                     loadingBuilder: (context, child, progress) =>

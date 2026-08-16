@@ -6,6 +6,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
+import 'package:tawati_mobile/src/core/media_url.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/news/models/news.dart';
 import 'package:tawati_mobile/src/features/initiatives/models/initiative.dart';
@@ -686,7 +687,7 @@ class _AnnouncementCard extends StatelessWidget {
                 children: [
                   (image != null && image.isNotEmpty)
                       ? Image.network(
-                          image,
+                          resolveMediaUrl(image),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => _imagePlaceholder(),
                         )
@@ -835,7 +836,7 @@ class _EventRow extends StatelessWidget {
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.network(
-                        image,
+                        resolveMediaUrl(image),
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => _thumbPlaceholder(),
                       ),
@@ -1253,6 +1254,7 @@ Map<String, dynamic> _newsToMap(News n) {
       'wedding' => 'wedding',
       _ => '',
     },
+    'image': n.image,
     'created_at': dateStr,
     'content': n.content,
   };
