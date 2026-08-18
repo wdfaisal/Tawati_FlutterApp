@@ -11,6 +11,9 @@ class SocketService {
   }
 
   static String _serverUrlFromApi(String apiBaseUrl) {
+    if (apiBaseUrl.endsWith('/api/v1')) {
+      return apiBaseUrl.substring(0, apiBaseUrl.length - 7);
+    }
     if (apiBaseUrl.endsWith('/api')) {
       return apiBaseUrl.substring(0, apiBaseUrl.length - 4);
     }
@@ -22,7 +25,7 @@ class SocketService {
 
     const apiBaseUrl = String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'http://54.251.69.36/api',
+      defaultValue: 'http://54.251.69.36/api/v1',
     );
     final token = await _api?.getAccessToken() ?? '';
 
