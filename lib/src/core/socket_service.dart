@@ -22,7 +22,7 @@ class SocketService {
 
     const apiBaseUrl = String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'http://10.237.182.29:3000/api',
+      defaultValue: 'http://54.251.69.36/api',
     );
     final token = await _api?.getAccessToken() ?? '';
 

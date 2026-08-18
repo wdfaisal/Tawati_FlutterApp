@@ -20,8 +20,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   static const _pages = [
     _OnboardingPageData(
       image: 'assets/images/Splash_Screen_Image_4.png',
-      line1: 'منصة تواتي للخدمة',
-      line2: 'المجتمعية',
+      line1: 'توتي عالم جميل ',
+      line2: 'هويتنا تواتي',
       subtitle: 'ساهم في تنمية مجتمعك وكن جزءاً من مبادرات تواتي الهادفة التي تجمعنا جميعاً كن جزء من «تواتي عالم جميل».',
     ),
     _OnboardingPageData(

@@ -288,7 +288,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   color: _kLabelColor,
                                 ),
                                 decoration: InputDecoration(
-                                  hintText: '5XX XXX XXXX',
+                                  hintText: '09X XXX XXXX',
                                   hintStyle: const TextStyle(
                                     fontFamily: 'IBMPlexSansArabic',
                                     color: _kPlaceholderColor,
