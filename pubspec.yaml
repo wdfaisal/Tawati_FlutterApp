@@ -1,5 +1,5 @@
 name: tawati_mobile
-description: "تواتي — منصة العائلة"
+description: "Tawati — منصة العائلة"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -27,6 +27,7 @@ dependencies:
   socket_io_client: ^3.0.2
   flutter_stripe: ^11.5.0
   local_auth: ^2.3.0
+  flutter_quill: ^11.4.2
 
 dev_dependencies:
   flutter_test:

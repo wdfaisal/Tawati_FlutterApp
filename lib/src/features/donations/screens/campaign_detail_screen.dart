@@ -111,6 +111,62 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
     );
   }
 
+  Widget _buildHeaderBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      color: Colors.white,
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Transform.rotate(
+              angle: math.pi,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: _kSurface,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.arrow_back_ios_rounded, size: 16, color: _kPrimary),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _campaign?.title ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _kDark,
+                  ),
+                ),
+                if (_campaign?.fundName != null)
+                  Text(
+                    _campaign!.fundName!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'IBMPlexSansArabic',
+                      fontSize: 12,
+                      color: _kMuted,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildError() {
     return SafeArea(
       child: Center(
@@ -209,29 +265,36 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
     final fmt = NumberFormat('#,##0');
     final percent = (campaign.progress * 100).toInt();
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHero(campaign),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Transform.translate(
-              offset: const Offset(0, -56),
-              child: _buildProgressCard(campaign, fmt, percent),
+    return Column(
+      children: [
+        _buildHeaderBar(),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHero(campaign),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Transform.translate(
+                    offset: const Offset(0, -56),
+                    child: _buildProgressCard(campaign, fmt, percent),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                  child: _buildAboutSection(campaign, fmt),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+                  child: _buildRecentDonors(campaign),
+                ),
+                const SizedBox(height: 32),
+              ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-            child: _buildAboutSection(campaign),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
-            child: _buildRecentDonors(campaign),
-          ),
-          const SizedBox(height: 32),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -239,7 +302,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
     final hasImage = campaign.image != null && campaign.image!.isNotEmpty;
 
     return SizedBox(
-      height: 260,
+      height: 220,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
@@ -256,66 +319,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0x66000000), Color(0x00000000)],
-              ),
-            ),
-          ),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Transform.rotate(
-                      angle: math.pi,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.25),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.arrow_back_ios_rounded, size: 16, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          campaign.title,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: 'IBMPlexSansArabic',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                        if (campaign.fundName != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            campaign.fundName!,
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'IBMPlexSansArabic',
-                              fontSize: 12,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 40),
-                ],
+                colors: [Color(0x33000000), Color(0x00000000)],
               ),
             ),
           ),
@@ -424,37 +428,6 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          const Divider(height: 1, color: _kBorder),
-          const SizedBox(height: 16),
-          const Text('مبالغ سريعة', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted)),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              for (final amount in const [10000, 20000, 50000, 100000])
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: GestureDetector(
-                      onTap: () => _showDonateDialog(initialAmount: amount.toDouble()),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _kSurface,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(fmt.format(amount), style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w700, color: _kPrimary)),
-                            const SizedBox(height: 2),
-                            const Text('ج.س', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 9, color: _kMuted)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
         ],
       ),
     );
@@ -482,7 +455,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
     );
   }
 
-  Widget _buildAboutSection(Campaign campaign) {
+  Widget _buildAboutSection(Campaign campaign, NumberFormat fmt) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -501,6 +474,38 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
         Text(
           campaign.description ?? 'لا يوجد وصف',
           style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: _kParagraph, height: 1.8),
+        ),
+        const SizedBox(height: 20),
+        const Divider(height: 1, color: _kBorder),
+        const SizedBox(height: 16),
+        const Text('مبالغ سريعة', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted)),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            for (final amount in const [10000, 20000, 50000, 100000])
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: GestureDetector(
+                    onTap: () => _showDonateDialog(initialAmount: amount.toDouble()),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _kSurface,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(fmt.format(amount), style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w700, color: _kPrimary)),
+                          const SizedBox(height: 2),
+                          const Text('ج.س', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 9, color: _kMuted)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ],
     );
@@ -733,6 +738,7 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
   String? _receiptPath;
   String? _resultType;
   double? _resultAmount;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -764,26 +770,19 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
 
     final method = _selectedMethod;
     if (method == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('لا توجد طرق دفع متاحة لهذه الحملة', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      setState(() => _errorMessage = 'لا توجد طرق دفع متاحة لهذه الحملة');
       return;
     }
 
     if (method.type == 'manual' && method.requiresReceipt && _receiptPath == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى إرفاق إشعار الدفع لإتمام التبرع', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      setState(() => _errorMessage = 'يرجى إرفاق إشعار الدفع لإتمام التبرع');
       return;
     }
 
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _errorMessage = null;
+    });
     try {
       final amount = double.parse(_amountController.text);
 
@@ -818,7 +817,6 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _submitting = false);
         String message = 'فشل التبرع';
         try {
           if (e is Exception) {
@@ -828,14 +826,10 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
             }
           }
         } catch (_) {}
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message, style: const TextStyle(fontFamily: 'IBMPlexSansArabic')),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        setState(() {
+          _submitting = false;
+          _errorMessage = message;
+        });
       }
     }
   }
@@ -870,7 +864,27 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    if (_resultType != null) return _buildResult(context);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 400),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final isNew = child.key == const ValueKey('result');
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: isNew ? const Offset(0, 0.3) : Offset.zero,
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      },
+      child: _resultType != null
+          ? KeyedSubtree(key: const ValueKey('result'), child: _buildResult(context))
+          : KeyedSubtree(key: const ValueKey('form'), child: _buildForm(context)),
+    );
+  }
+
+  Widget _buildForm(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Container(
@@ -948,6 +962,34 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
                   ],
                   const SizedBox(height: 16),
                   _buildAnonymousToggle(),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, size: 18, color: Color(0xFFEF4444)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: Color(0xFFEF4444)),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => setState(() => _errorMessage = null),
+                            child: const Icon(Icons.close, size: 16, color: Color(0xFFEF4444)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,

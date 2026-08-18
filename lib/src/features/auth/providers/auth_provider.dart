@@ -199,7 +199,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    await _authService.logout();
+    final refreshToken = await _apiClient.getRefreshToken();
+    await _authService.logout(refreshToken: refreshToken);
     final bio = _ref.read(biometricServiceProvider);
     final biometricEnabled = await bio.isEnabled();
     if (!biometricEnabled) {

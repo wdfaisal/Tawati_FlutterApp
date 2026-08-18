@@ -21,6 +21,8 @@ import 'package:tawati_mobile/src/features/initiatives/screens/initiatives_tab.d
 import 'package:tawati_mobile/src/features/initiatives/screens/initiative_detail_screen.dart';
 import 'package:tawati_mobile/src/features/groups/screens/group_chat_screen.dart';
 import 'package:tawati_mobile/src/features/notifications/screens/notifications_screen.dart';
+import 'package:tawati_mobile/src/features/join_requests/screens/join_requests_tab.dart';
+import 'package:tawati_mobile/src/features/join_requests/screens/join_request_detail_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -211,6 +213,22 @@ final appRouter = GoRouter(
       path: '/add-obituary',
       name: 'addObituary',
       builder: (c, s) => const AddObituaryScreen(),
+    ),
+    GoRoute(
+      path: '/join-requests',
+      name: 'joinRequests',
+      builder: (c, s) => const JoinRequestsTab(),
+    ),
+    GoRoute(
+      path: '/join-request/:id',
+      name: 'joinRequestDetail',
+      builder: (c, s) {
+        final request = s.extra as dynamic;
+        return JoinRequestDetailScreen(
+          requestId: s.pathParameters['id']!,
+          initialRequest: request,
+        );
+      },
     ),
   ],
 );

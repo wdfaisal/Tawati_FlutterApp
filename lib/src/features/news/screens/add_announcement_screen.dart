@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -24,6 +25,7 @@ class _CategoryOption {
 const _categories = [
   _CategoryOption('إعلان عام', 'general'),
   _CategoryOption('إعلان مهم', 'important'),
+  _CategoryOption('إعلان المنصة', 'platform_announcement'),
   _CategoryOption('مناسبة اجتماعية', 'social_occasion'),
   _CategoryOption('حفل زفاف', 'social_occasion', 'wedding'),
 ];
@@ -38,19 +40,20 @@ class AddAnnouncementScreen extends ConsumerStatefulWidget {
 class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
-  final _descriptionCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
+  final _quillCtrl = QuillController.basic();
 
   String? _imagePath;
   _CategoryOption? _category;
   TimeOfDay? _time;
   DateTime? _date;
   bool _submitting = false;
+  bool _showSchedule = false;
 
   @override
   void dispose() {
     _titleCtrl.dispose();
-    _descriptionCtrl.dispose();
+    _quillCtrl.dispose();
     _locationCtrl.dispose();
     super.dispose();
   }
@@ -95,6 +98,16 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final delta = _quillCtrl.document.toDelta();
+    final plainText = delta.toString().trim();
+    if (plainText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى كتابة وصف الإعلان')),
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
     try {
       String? imageUrl;
@@ -103,7 +116,7 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
       }
       final body = <String, dynamic>{
         'title': _titleCtrl.text.trim(),
-        'content': _descriptionCtrl.text.trim(),
+        'content': plainText,
         'type': _category?.type ?? 'general',
         if (_category?.subType != null) 'sub_type': _category!.subType,
         'image': ?imageUrl,
@@ -161,7 +174,7 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
                         const SizedBox(height: 8),
                         _field(
                           controller: _titleCtrl,
-                          hint: 'مثال: حفل زفاف فهد بن سالم',
+                          hint: 'مبادرة تواتي أولاً وأخيراً',
                           validator: (v) => (v == null || v.trim().isEmpty) ? 'يرجى إدخال عنوان الإعلان' : null,
                         ),
                         const SizedBox(height: 16),
@@ -171,24 +184,23 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
                         const SizedBox(height: 16),
                         const _Label('وصف الإعلان'),
                         const SizedBox(height: 8),
-                        _multilineField(
-                          controller: _descriptionCtrl,
-                          hint: 'اكتب تفاصيل الإعلان هنا...',
-                          height: 122,
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'يرجى كتابة وصف الإعلان' : null,
-                        ),
+                        _richEditor(),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(child: _timeField()),
-                            const SizedBox(width: 12),
-                            Expanded(child: _dateField()),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        const _Label('الموقع'),
-                        const SizedBox(height: 8),
-                        _locationField(),
+                        _scheduleToggle(),
+                        if (_showSchedule) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(child: _timeField()),
+                              const SizedBox(width: 12),
+                              Expanded(child: _dateField()),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const _Label('الموقع'),
+                          const SizedBox(height: 8),
+                          _locationField(),
+                        ],
                         const SizedBox(height: 28),
                         _submitButton(),
                       ],
@@ -321,26 +333,105 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
     );
   }
 
-  Widget _multilineField({
-    required TextEditingController controller,
-    required String hint,
-    required double height,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      validator: validator,
-      maxLines: null,
-      textAlignVertical: TextAlignVertical.top,
-      style: const TextStyle(
-        fontFamily: 'IBMPlexSansArabic',
-        fontSize: 15,
-        color: _kNameColor,
+  Widget _richEditor() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _kSoftBg,
+        borderRadius: BorderRadius.circular(12),
       ),
-      decoration: _decoration(hint).copyWith(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        children: [
+          QuillToolbar.simple(
+            configurations: QuillSimpleToolbarConfigurations(
+              controller: _quillCtrl,
+              showFontFamily: false,
+              showFontSize: true,
+              showBoldButton: true,
+              showItalicButton: true,
+              showUnderLineButton: true,
+              showStrikeThrough: false,
+              showInlineCode: false,
+              showColorButton: true,
+              showBackgroundColorButton: true,
+              showClearFormat: true,
+              showAlignmentButtons: false,
+              showLeftAlignment: false,
+              showCenterAlignment: false,
+              showRightAlignment: false,
+              showJustifyAlignment: false,
+              showHeaderStyle: false,
+              showListBullets: true,
+              showListNumbers: false,
+              showListCheck: false,
+              showCodeBlock: false,
+              showQuote: false,
+              showIndent: false,
+              showLink: false,
+              showDividers: false,
+              toolbarIconBorderRadius: BorderRadius.circular(8),
+              toolbarIconPadding: const EdgeInsets.all(6),
+            ),
+          ),
+          const Divider(height: 1, color: _kMuted),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 180),
+            child: QuillEditor.basic(
+              configurations: QuillEditorConfigurations(
+                controller: _quillCtrl,
+                readOnly: false,
+                scrollable: true,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                placeholder: 'اكتب تفاصيل الإعلان هنا...',
+                fontFamily: 'IBMPlexSansArabic',
+                textStyle: const TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 15,
+                  color: _kNameColor,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-    ).withHeight(height);
+    );
+  }
+
+  Widget _scheduleToggle() {
+    return InkWell(
+      onTap: () => setState(() => _showSchedule = !_showSchedule),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: _boxDecoration(12),
+        child: Row(
+          children: [
+            Icon(
+              _showSchedule ? Icons.access_time_filled_rounded : Icons.access_time_rounded,
+              color: _showSchedule ? AppColors.primary : _kSecondary,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _showSchedule ? 'تعطيل جدولة الإعلان' : 'تحديد موعد النشر (اختياري)',
+                style: TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: _showSchedule ? AppColors.primary : _kSecondary,
+                ),
+              ),
+            ),
+            Icon(
+              _showSchedule ? Icons.toggle_on_rounded : Icons.toggle_off_rounded,
+              color: _showSchedule ? AppColors.primary : _kMuted,
+              size: 32,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _categoryField() {
@@ -634,8 +725,4 @@ class _HeaderCircleButton extends StatelessWidget {
       ),
     );
   }
-}
-
-extension _HeightExt on Widget {
-  Widget withHeight(double height) => SizedBox(height: height, child: this);
 }

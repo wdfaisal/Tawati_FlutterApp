@@ -1,6 +1,6 @@
 {
-    "name": "tawati_mobile",
-    "short_name": "tawati_mobile",
+    "name": "Tawati",
+    "short_name": "Tawati",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

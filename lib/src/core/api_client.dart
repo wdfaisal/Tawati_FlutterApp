@@ -14,6 +14,9 @@ class _InMemoryStorage {
 class ApiClient {
   late final Dio _dio;
   final Object _storage;
+  bool _isRefreshing = false;
+
+  static const _authPaths = ['/auth/login', '/auth/refresh-token', '/auth/logout', '/auth/request-otp', '/auth/verify-otp', '/auth/set-password'];
 
   ApiClient({required String baseUrl})
       : _storage = kIsWeb ? _InMemoryStorage() : const FlutterSecureStorage() {
@@ -34,12 +37,22 @@ class ApiClient {
       },
       onError: (error, handler) async {
         if (error.response?.statusCode == 401) {
-          final refreshed = await _refreshToken();
-          if (refreshed) {
-            final retryResponse = await _retry(error.requestOptions);
-            return handler.resolve(retryResponse);
+          final path = error.requestOptions.path;
+          final isAuthPath = _authPaths.any((p) => path.contains(p));
+          if (!isAuthPath && !_isRefreshing) {
+            _isRefreshing = true;
+            try {
+              final refreshed = await _refreshToken();
+              if (refreshed) {
+                final retryResponse = await _retry(error.requestOptions);
+                return handler.resolve(retryResponse);
+              }
+              await clearTokens();
+            } catch (_) {
+            } finally {
+              _isRefreshing = false;
+            }
           }
-          await clearTokens();
         }
         handler.next(error);
       },
@@ -102,6 +115,8 @@ class ApiClient {
   }
 
   Future<String?> getAccessToken() => _read('access_token');
+
+  Future<String?> getRefreshToken() => _read('refresh_token');
 
   Future<void> clearTokens() async {
     await _delete('access_token');
