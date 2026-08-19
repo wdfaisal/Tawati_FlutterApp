@@ -1252,6 +1252,7 @@ Map<String, dynamic> _newsToMap(News n) {
   final d = n.createdAt.toLocal();
   final dateStr = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
   return {
+    '_id': n.id,
     'title': n.title,
     'subtitle': n.subtitle,
     'type': n.type,
@@ -1263,6 +1264,12 @@ Map<String, dynamic> _newsToMap(News n) {
     'image': n.image,
     'created_at': dateStr,
     'content': n.content,
+    'status': n.status,
+    if (n.createdByName != null || n.createdById != null)
+      'created_by': {
+        if (n.createdById != null) '_id': n.createdById,
+        if (n.createdByName != null) 'full_name': n.createdByName,
+      },
   };
 }
 

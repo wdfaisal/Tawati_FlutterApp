@@ -9,6 +9,8 @@
   final List<String> targetRoles;
   final List<String> targetFamilies;
   final String? createdByName;
+  final String? createdById;
+  final String status;
   final bool isPublished;
   final DateTime? publishedAt;
   final DateTime createdAt;
@@ -24,6 +26,8 @@
     required this.targetRoles,
     required this.targetFamilies,
     this.createdByName,
+    this.createdById,
+    required this.status,
     required this.isPublished,
     this.publishedAt,
     required this.createdAt,
@@ -42,6 +46,10 @@
     createdByName: json['created_by'] is Map
         ? (json['created_by'] as Map)['full_name']?.toString()
         : json['created_by_name']?.toString(),
+    createdById: json['created_by'] is Map
+        ? (json['created_by'] as Map)['_id']?.toString()
+        : (json['created_by'] is String ? json['created_by'] as String : null),
+    status: json['status'] ?? 'draft',
     isPublished: json['is_published'] ?? (json['status'] == 'published'),
     publishedAt: json['published_at'] != null ? DateTime.tryParse(json['published_at']) : null,
     createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),

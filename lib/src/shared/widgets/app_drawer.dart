@@ -144,6 +144,8 @@ class NavSection extends StatelessWidget {
           const SizedBox(height: 4),
           _NavItem(icon: Icons.article_outlined, activeIcon: Icons.article, label: 'الأخبار والمناسبات', route: 'news', onTap: onNavigate),
           const SizedBox(height: 4),
+          _NavItem(icon: Icons.campaign_outlined, activeIcon: Icons.campaign, label: 'إعلاناتي', route: 'myAnnouncements', onTap: onNavigate),
+          const SizedBox(height: 4),
           _NavItem(icon: Icons.account_tree_outlined, activeIcon: Icons.account_tree, label: 'شجرة العائلة', route: 'familyTree', onTap: onNavigate),
           const SizedBox(height: 4),
           _NavItem(icon: Icons.how_to_reg_outlined, activeIcon: Icons.how_to_reg, label: 'طلبات الانضمام', route: 'joinRequests', onTap: onNavigate),

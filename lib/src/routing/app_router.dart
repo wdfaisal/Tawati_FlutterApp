@@ -23,6 +23,7 @@ import 'package:tawati_mobile/src/features/groups/screens/group_chat_screen.dart
 import 'package:tawati_mobile/src/features/notifications/screens/notifications_screen.dart';
 import 'package:tawati_mobile/src/features/join_requests/screens/join_requests_tab.dart';
 import 'package:tawati_mobile/src/features/join_requests/screens/join_request_detail_screen.dart';
+import 'package:tawati_mobile/src/features/news/screens/my_announcements_tab.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -207,7 +208,12 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/add-announcement',
       name: 'addAnnouncement',
-      builder: (c, s) => const AddAnnouncementScreen(),
+      builder: (c, s) => AddAnnouncementScreen(editData: s.extra as Map<String, dynamic>?),
+    ),
+    GoRoute(
+      path: '/my-announcements',
+      name: 'myAnnouncements',
+      builder: (c, s) => const MyAnnouncementsTab(),
     ),
     GoRoute(
       path: '/add-obituary',

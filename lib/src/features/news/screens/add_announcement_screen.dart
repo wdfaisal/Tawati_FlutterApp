@@ -31,7 +31,9 @@ const _categories = [
 ];
 
 class AddAnnouncementScreen extends ConsumerStatefulWidget {
-  const AddAnnouncementScreen({super.key});
+  const AddAnnouncementScreen({super.key, this.editData});
+
+  final Map<String, dynamic>? editData;
 
   @override
   ConsumerState<AddAnnouncementScreen> createState() => _AddAnnouncementScreenState();
@@ -41,14 +43,47 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
-  final _quillCtrl = QuillController.basic();
+  late QuillController _quillCtrl;
 
   String? _imagePath;
+  String? _existingImageUrl;
   _CategoryOption? _category;
   TimeOfDay? _time;
   DateTime? _date;
   bool _submitting = false;
   bool _showSchedule = false;
+
+  bool get _isEditMode => widget.editData != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final data = widget.editData;
+    if (data != null) {
+      _titleCtrl.text = data['title'] as String? ?? '';
+      final content = data['content'] as String? ?? data['body'] as String? ?? '';
+      if (content.isNotEmpty) {
+        final doc = Document()..insert(0, content);
+        _quillCtrl = QuillController(
+          document: doc,
+          selection: TextSelection.collapsed(offset: content.length),
+        );
+      } else {
+        _quillCtrl = QuillController.basic();
+      }
+      _existingImageUrl = data['image'] as String?;
+      final type = data['type'] as String? ?? 'general';
+      final subType = data['sub_type'] as String?;
+      for (final c in _categories) {
+        if (c.type == type && c.subType == subType) {
+          _category = c;
+          break;
+        }
+      }
+    } else {
+      _quillCtrl = QuillController.basic();
+    }
+  }
 
   @override
   void dispose() {
@@ -113,19 +148,26 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
       String? imageUrl;
       if (_imagePath != null) {
         imageUrl = await ref.read(newsServiceProvider).uploadImage(_imagePath!);
+      } else {
+        imageUrl = _existingImageUrl;
       }
       final body = <String, dynamic>{
         'title': _titleCtrl.text.trim(),
         'content': plainText,
         'type': _category?.type ?? 'general',
         if (_category?.subType != null) 'sub_type': _category!.subType,
-        'image': ?imageUrl,
+        if (imageUrl != null) 'image': imageUrl,
       };
-      await ref.read(newsServiceProvider).createNews(body);
+      if (_isEditMode) {
+        final id = widget.editData!['_id'] as String? ?? widget.editData!['id'] as String? ?? '';
+        await ref.read(newsServiceProvider).updateNews(id, body);
+      } else {
+        await ref.read(newsServiceProvider).createNews(body);
+      }
       if (!mounted) return;
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم نشر الإعلان بنجاح')),
+        SnackBar(content: Text(_isEditMode ? 'تم تعديل الإعلان بنجاح' : 'تم نشر الإعلان بنجاح')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -241,7 +283,7 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              'إضافة إعلان جديد',
+              _isEditMode ? 'تعديل الإعلان' : 'إضافة إعلان جديد',
               style: TextStyle(
                 fontFamily: 'IBMPlexSansArabic',
                 fontSize: 20,
@@ -270,47 +312,54 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
         ),
         child: _imagePath != null
             ? Image.file(File(_imagePath!), fit: BoxFit.cover)
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(Icons.camera_alt_rounded, color: AppColors.primary, size: 22),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'اضغط هنا لتحميل صورة',
-                    style: TextStyle(
-                      fontFamily: 'IBMPlexSansArabic',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: _kSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'يفضل أن تكون بمقاس 1200x800 بكسل',
-                    style: TextStyle(
-                      fontFamily: 'IBMPlexSansArabic',
-                      fontSize: 12,
-                      color: _kMuted,
-                    ),
-                  ),
-                ],
-              ),
+            : (_existingImageUrl != null
+                ? Image.network(_existingImageUrl!, fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => _imagePlaceholder())
+                : _imagePlaceholder()),
       ),
+    );
+  }
+
+  Widget _imagePlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(Icons.camera_alt_rounded, color: AppColors.primary, size: 22),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'اضغط هنا لتحميل صورة',
+          style: TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: _kSecondary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'يفضل أن تكون بمقاس 1200x800 بكسل',
+          style: TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 12,
+            color: _kMuted,
+          ),
+        ),
+      ],
     );
   }
 
@@ -633,7 +682,7 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'نشر الإعلان',
+                    _isEditMode ? 'حفظ التعديلات' : 'نشر الإعلان',
                     style: TextStyle(
                       fontFamily: 'IBMPlexSansArabic',
                       fontSize: 16,
