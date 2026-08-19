@@ -741,7 +741,8 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
           amount: result['amount'] as double,
           anonymous: result['anonymous'] as bool? ?? false,
         ),
-    );
+      );
+    }
   }
 }
 
