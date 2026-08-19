@@ -838,7 +838,6 @@ class DonationResultSheet extends StatelessWidget {
     );
   }
 }
-}
 
 class DonationBottomSheet extends ConsumerStatefulWidget {
   final Campaign campaign;
