@@ -24,7 +24,7 @@ class JoinRequestService {
     };
     if (status != null) params['status'] = status;
 
-    final response = await _api.get('/registration-requests/my', params: params);
+    final response = await _api.get('/registration-requests', params: params);
     final list = response.data['data'] as List<dynamic>;
     return list.map((e) => JoinRequest.fromJson(e)).toList();
   }
@@ -55,7 +55,7 @@ class JoinRequestService {
     final params = <String, dynamic>{'limit': 1};
     if (status != null) params['status'] = status;
 
-    final response = await _api.get('/registration-requests/my', params: params);
+    final response = await _api.get('/registration-requests', params: params);
     final meta = response.data['meta'] as Map<String, dynamic>?;
     return meta?['total'] as int? ?? 0;
   }

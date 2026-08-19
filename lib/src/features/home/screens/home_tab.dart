@@ -73,6 +73,7 @@ class HomeTab extends ConsumerWidget {
                 onAddDeath: () => context.push('/add-obituary'),
                 onOpenChats: onOpenGroups ?? () {},
                 onDonate: onOpenDonations ?? () {},
+                onJoinRequests: () => context.push('/join-requests'),
               ),
               _CampaignsSection(
                 campaignsAsync: campaignsAsync,
@@ -152,6 +153,10 @@ class HomeTab extends ConsumerWidget {
             _sheetItem(ctx, Icons.volunteer_activism_outlined, 'تبرع', () {
               Navigator.of(ctx).pop();
               onOpenDonations?.call();
+            }),
+            _sheetItem(ctx, Icons.how_to_reg_outlined, 'طلبات الانضمام', () {
+              Navigator.of(ctx).pop();
+              context.push('/join-requests');
             }),
             const SizedBox(height: 12),
           ],
@@ -352,12 +357,14 @@ class _QuickActionsRow extends StatelessWidget {
   final VoidCallback onAddDeath;
   final VoidCallback onOpenChats;
   final VoidCallback onDonate;
+  final VoidCallback onJoinRequests;
 
   const _QuickActionsRow({
     required this.onAddAnnouncement,
     required this.onAddDeath,
     required this.onOpenChats,
     required this.onDonate,
+    required this.onJoinRequests,
   });
 
   @override
@@ -379,8 +386,15 @@ class _QuickActionsRow extends StatelessWidget {
               Expanded(child: _QuickActionTile(icon: Icons.description_outlined, label: 'إضافة وفاة', onTap: onAddDeath)),
               const SizedBox(width: 12),
               Expanded(child: _QuickActionTile(icon: Icons.chat_bubble_outline_rounded, label: 'دردشة', onTap: onOpenChats)),
-              const SizedBox(width: 12),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
               Expanded(child: _QuickActionTile(icon: Icons.volunteer_activism_outlined, label: 'تبرع', onTap: onDonate)),
+              const SizedBox(width: 12),
+              Expanded(child: _QuickActionTile(icon: Icons.how_to_reg_outlined, label: 'طلبات الانضمام', onTap: onJoinRequests)),
+              const Expanded(child: SizedBox()),
             ],
           ),
         ],
