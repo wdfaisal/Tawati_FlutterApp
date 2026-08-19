@@ -112,57 +112,60 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
   }
 
   Widget _buildHeaderBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      color: Colors.white,
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Transform.rotate(
-              angle: math.pi,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: _kSurface,
-                  shape: BoxShape.circle,
+    return SafeArea(
+      bottom: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        color: Colors.transparent,
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Transform.rotate(
+                angle: math.pi,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0x66000000),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.arrow_back_ios_rounded, size: 16, color: Colors.white),
                 ),
-                child: const Icon(Icons.arrow_back_ios_rounded, size: 16, color: _kPrimary),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _campaign?.title ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'IBMPlexSansArabic',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: _kDark,
-                  ),
-                ),
-                if (_campaign?.fundName != null)
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    _campaign!.fundName!,
+                    _campaign?.title ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontFamily: 'IBMPlexSansArabic',
-                      fontSize: 12,
-                      color: _kMuted,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
                     ),
                   ),
-              ],
+                  if (_campaign?.fundName != null)
+                    Text(
+                      _campaign!.fundName!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -267,33 +270,44 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
 
     return Column(
       children: [
-        _buildHeaderBar(),
         Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHero(campaign),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Transform.translate(
-                    offset: const Offset(0, -56),
-                    child: _buildProgressCard(campaign, fmt, percent),
-                  ),
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHero(campaign),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Transform.translate(
+                        offset: const Offset(0, -56),
+                        child: _buildProgressCard(campaign, fmt, percent),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                      child: _buildAboutSection(campaign, fmt),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+                      child: _buildRecentDonors(campaign),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                  child: _buildAboutSection(campaign, fmt),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
-                  child: _buildRecentDonors(campaign),
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _buildHeaderBar(),
+              ),
+            ],
           ),
         ),
+        if (_campaign != null && _campaign!.isActive)
+          _buildBottomCta(),
       ],
     );
   }
@@ -695,7 +709,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
   }
 
   Future<void> _showDonateDialog({double? initialAmount}) async {
-    await showModalBottomSheet<void>(
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -710,7 +724,119 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
       ),
     );
     if (mounted) _loadDetail();
+    if (result != null && mounted) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: const Color(0x4D000000),
+        sheetAnimationStyle: AnimationStyle(
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeOutCubic,
+        ),
+        builder: (context) => DonationResultSheet(
+          resultType: result['type'] as String,
+          amount: result['amount'] as double,
+          anonymous: result['anonymous'] as bool? ?? false,
+        ),
+    );
   }
+}
+
+class DonationResultSheet extends StatelessWidget {
+  final String resultType;
+  final double amount;
+  final bool anonymous;
+
+  const DonationResultSheet({
+    super.key,
+    required this.resultType,
+    required this.amount,
+    this.anonymous = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isReview = resultType == 'review';
+    final fmt = NumberFormat('#,##0');
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: child,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: (isReview ? AppColors.warning : AppColors.success).withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isReview ? Icons.schedule : Icons.check_circle_outline,
+                      size: 38,
+                      color: isReview ? AppColors.warning : AppColors.success,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    isReview ? 'عملية التبرع قيد المراجعة' : 'تم تأكيد تبرعك بنجاح',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${fmt.format(amount)} ج.س',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.primary),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    isReview
+                        ? 'تم استلام طلبك بنجاح، وسيقوم فريق الإدارة بمراجعته وتأكيده خلال وقت قصير. ستصلك إشعارات فور تأكيد التبرع.'
+                        : (anonymous
+                            ? 'شكراً لك على مساهمتك، ستظهر مساهمتك باسم فاعل خير في سجل المساهمات.'
+                            : 'شكراً لك على مساهمتك، سيظهر اسمك في سجل المساهمات.'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary, height: 1.7),
+                  ),
+                  const SizedBox(height: 28),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('تم'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 }
 
 class DonationBottomSheet extends ConsumerStatefulWidget {
@@ -736,8 +862,6 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
   bool _anonymous = false;
   bool _submitting = false;
   String? _receiptPath;
-  String? _resultType;
-  double? _resultAmount;
   String? _errorMessage;
 
   @override
@@ -807,9 +931,10 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
               isAnonymous: _anonymous,
             );
         if (mounted) {
-          setState(() {
-            _resultType = 'review';
-            _resultAmount = amount;
+          Navigator.of(context).pop({
+            'type': 'review',
+            'amount': amount,
+            'anonymous': _anonymous,
           });
         }
       } else {
@@ -855,33 +980,17 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
     await Stripe.instance.confirmPaymentSheetPayment();
 
     if (mounted) {
-      setState(() {
-        _resultType = 'success';
-        _resultAmount = amount;
+      Navigator.of(context).pop({
+        'type': 'success',
+        'amount': amount,
+        'anonymous': _anonymous,
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 400),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        final isNew = child.key == const ValueKey('result');
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: isNew ? const Offset(0, 0.3) : Offset.zero,
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-          child: FadeTransition(opacity: animation, child: child),
-        );
-      },
-      child: _resultType != null
-          ? KeyedSubtree(key: const ValueKey('result'), child: _buildResult(context))
-          : KeyedSubtree(key: const ValueKey('form'), child: _buildForm(context)),
-    );
+    return _buildForm(context);
   }
 
   Widget _buildForm(BuildContext context) {
@@ -999,85 +1108,6 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Text('تأكيد التبرع'),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResult(BuildContext context) {
-    final isReview = _resultType == 'review';
-    final fmt = NumberFormat('#,##0');
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-            builder: (context, value, child) => Opacity(
-              opacity: value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - value)),
-                child: child,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: 72,
-                    height: 72,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: (isReview ? AppColors.warning : AppColors.success).withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isReview ? Icons.schedule : Icons.check_circle_outline,
-                      size: 38,
-                      color: isReview ? AppColors.warning : AppColors.success,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    isReview ? 'عملية التبرع قيد المراجعة' : 'تم تأكيد تبرعك بنجاح',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${fmt.format(_resultAmount ?? 0)} ج.س',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.primary),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    isReview
-                        ? 'تم استلام طلبك بنجاح، وسيقوم فريق الإدارة بمراجعته وتأكيده خلال وقت قصير. ستصلك إشعارات فور تأكيد التبرع.'
-                        : (_anonymous
-                            ? 'شكراً لك على مساهمتك، ستظهر مساهمتك باسم فاعل خير في سجل المساهمات.'
-                            : 'شكراً لك على مساهمتك، سيظهر اسمك في سجل المساهمات.'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary, height: 1.7),
-                  ),
-                  const SizedBox(height: 28),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('تم'),
                   ),
                 ],
               ),

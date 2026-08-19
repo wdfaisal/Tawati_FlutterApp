@@ -52,6 +52,7 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
   DateTime? _date;
   bool _submitting = false;
   bool _showSchedule = false;
+  bool _publishNow = true;
 
   bool get _isEditMode => widget.editData != null;
 
@@ -72,6 +73,7 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
         _quillCtrl = QuillController.basic();
       }
       _existingImageUrl = data['image'] as String?;
+      _publishNow = (data['status'] as String?) != 'draft';
       final type = data['type'] as String? ?? 'general';
       final subType = data['sub_type'] as String?;
       for (final c in _categories) {
@@ -157,6 +159,7 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
         'type': _category?.type ?? 'general',
         if (_category?.subType != null) 'sub_type': _category!.subType,
         if (imageUrl != null) 'image': imageUrl,
+        'status': _publishNow ? 'published' : 'draft',
       };
       if (_isEditMode) {
         final id = widget.editData!['_id'] as String? ?? widget.editData!['id'] as String? ?? '';
@@ -243,6 +246,8 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
                           const SizedBox(height: 8),
                           _locationField(),
                         ],
+                        const SizedBox(height: 16),
+                        _publishToggle(),
                         const SizedBox(height: 28),
                         _submitButton(),
                       ],
@@ -474,6 +479,44 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
     );
   }
 
+  Widget _publishToggle() {
+    return InkWell(
+      onTap: () => setState(() => _publishNow = !_publishNow),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: _boxDecoration(12),
+        child: Row(
+          children: [
+            Icon(
+              _publishNow ? Icons.public_rounded : Icons.edit_note_rounded,
+              color: _publishNow ? AppColors.primary : _kSecondary,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _publishNow ? 'نشر مباشر' : 'حفظ كمسودة',
+                style: TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: _publishNow ? AppColors.primary : _kSecondary,
+                ),
+              ),
+            ),
+            Icon(
+              _publishNow ? Icons.toggle_on_rounded : Icons.toggle_off_rounded,
+              color: _publishNow ? AppColors.primary : _kMuted,
+              size: 32,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _categoryField() {
     return InkWell(
       onTap: () => _showCategorySheet(),
@@ -682,7 +725,9 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    _isEditMode ? 'حفظ التعديلات' : 'نشر الإعلان',
+                    _isEditMode
+                        ? 'حفظ التعديلات'
+                        : (_publishNow ? 'نشر الإعلان' : 'حفظ كمسودة'),
                     style: TextStyle(
                       fontFamily: 'IBMPlexSansArabic',
                       fontSize: 16,
