@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'src/routing/app_router.dart';
 import 'src/core/theme/app_theme.dart';
 import 'src/core/providers.dart';
@@ -83,6 +84,7 @@ class _TawatiAppState extends ConsumerState<TawatiApp> {
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
+        quill.FlutterQuillLocalizations.delegate,
       ],
       routerConfig: appRouter,
       theme: seedColor != null

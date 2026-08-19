@@ -84,7 +84,7 @@ class NewsDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'تفاصيل الوفاة',
+            'تفاصيل الإعلان',
             style: TextStyle(
               fontFamily: 'IBMPlexSansArabic',
               fontSize: 22,
@@ -94,7 +94,7 @@ class NewsDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           const Text(
-            'تفاصيل حالة الوفاة المعلنة',
+            'تفاصيل الإعلان المُعلن',
             style: TextStyle(
               fontFamily: 'IBMPlexSansArabic',
               fontSize: 12,
