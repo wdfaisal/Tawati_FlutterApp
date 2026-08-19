@@ -55,6 +55,23 @@
     createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
   );
 
+  Map<String, dynamic> toJson() => {
+    '_id': id,
+    'title': title,
+    'subtitle': subtitle,
+    'content': content,
+    'type': type,
+    'sub_type': subType,
+    'image': image,
+    'status': status,
+    'is_published': isPublished,
+    if (createdById != null || createdByName != null)
+      'created_by': {
+        if (createdById != null) '_id': createdById,
+        if (createdByName != null) 'full_name': createdByName,
+      },
+  };
+
   bool get isDeath => type == 'social_occasion' && subType == 'death';
   bool get isWedding => type == 'social_occasion' && subType == 'wedding';
   bool get isCongratulation => type == 'social_occasion' && subType == 'congratulation';

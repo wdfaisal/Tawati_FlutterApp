@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/media_url.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/news.dart';
-import '../providers/news_providers.dart';
+import '../services/news_service.dart';
 import '../services/news_service.dart';
 
 class MyAnnouncementsTab extends ConsumerStatefulWidget {
