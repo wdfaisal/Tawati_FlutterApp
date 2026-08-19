@@ -341,9 +341,9 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
       ),
       child: Column(
         children: [
-          QuillToolbar.simple(
-            configurations: QuillSimpleToolbarConfigurations(
-              controller: _quillCtrl,
+          QuillSimpleToolbar(
+            controller: _quillCtrl,
+            config: QuillSimpleToolbarConfig(
               showFontFamily: false,
               showFontSize: true,
               showBoldButton: true,
@@ -368,26 +368,17 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
               showIndent: false,
               showLink: false,
               showDividers: false,
-              toolbarIconBorderRadius: BorderRadius.circular(8),
-              toolbarIconPadding: const EdgeInsets.all(6),
             ),
           ),
           const Divider(height: 1, color: _kMuted),
           ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 180),
             child: QuillEditor.basic(
-              configurations: QuillEditorConfigurations(
-                controller: _quillCtrl,
-                readOnly: false,
+              controller: _quillCtrl,
+              config: QuillEditorConfig(
                 scrollable: true,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 placeholder: 'اكتب تفاصيل الإعلان هنا...',
-                fontFamily: 'IBMPlexSansArabic',
-                textStyle: const TextStyle(
-                  fontFamily: 'IBMPlexSansArabic',
-                  fontSize: 15,
-                  color: _kNameColor,
-                ),
               ),
             ),
           ),
