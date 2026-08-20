@@ -94,9 +94,9 @@ class _ActivationOtpScreenState extends ConsumerState<ActivationOtpScreen> {
     if (_otpCode.length < 6) return;
     setState(() => _verifying = true);
     try {
-      await ref.read(authProvider.notifier).verifyOtp(phone: widget.phone, otp: _otpCode);
+      await ref.read(authProvider.notifier).verifyOtpOnly(phone: widget.phone, otp: _otpCode);
       if (!mounted) return;
-      context.pushReplacementNamed('activationPassword', extra: widget.phone);
+      context.pushReplacementNamed('activationPassword', extra: {'phone': widget.phone, 'otp': _otpCode});
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -162,7 +162,7 @@ class _ActivationOtpScreenState extends ConsumerState<ActivationOtpScreen> {
                   color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('في وضع التطوير: استخدم 1234',
+                child: const Text('في وضع التطوير: استخدم 123456',
                     style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.primary)),
               ),
               const SizedBox(height: 40),

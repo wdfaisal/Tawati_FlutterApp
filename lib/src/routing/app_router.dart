@@ -20,6 +20,9 @@ import 'package:tawati_mobile/src/features/news/screens/add_obituary_screen.dart
 import 'package:tawati_mobile/src/features/donations/screens/donations_tab.dart';
 import 'package:tawati_mobile/src/features/donations/screens/campaign_detail_screen.dart';
 import 'package:tawati_mobile/src/features/donations/screens/my_donations_screen.dart';
+import 'package:tawati_mobile/src/features/donations/screens/admin_donations_screen.dart';
+import 'package:tawati_mobile/src/features/donations/screens/donation_detail_screen.dart';
+import 'package:tawati_mobile/src/features/donations/screens/donation_reports_screen.dart';
 import 'package:tawati_mobile/src/features/family/screens/family_tree_screen.dart';
 import 'package:tawati_mobile/src/features/initiatives/screens/initiatives_tab.dart';
 import 'package:tawati_mobile/src/features/initiatives/screens/initiative_detail_screen.dart';
@@ -138,22 +141,17 @@ final appRouter = GoRouter(
       path: '/activation-password',
       name: 'activationPassword',
       builder: (c, s) {
-        final phone = s.extra as String? ?? '';
-        return ActivationPasswordScreen(phone: phone);
+        final data = s.extra as Map<String, dynamic>? ?? {};
+        return ActivationPasswordScreen(phone: data['phone'] as String? ?? '', otp: data['otp'] as String? ?? '');
       },
     ),
     GoRoute(
       path: '/activation-success',
       name: 'activationSuccess',
       pageBuilder: (context, state) {
-        final extra = state.extra as Map?;
         return CustomTransitionPage(
           key: state.pageKey,
-          child: ActivationSuccessScreen(
-            userName: extra?['name'] as String? ?? '',
-            needsFamilySetup: extra?['needsSetup'] as bool? ?? false,
-            userId: extra?['userId'] as String?,
-          ),
+          child: const ActivationSuccessScreen(),
           transitionDuration: const Duration(milliseconds: 400),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
@@ -266,6 +264,21 @@ final appRouter = GoRouter(
       path: '/my-donations',
       name: 'myDonations',
       builder: (c, s) => const MyDonationsScreen(),
+    ),
+    GoRoute(
+      path: '/admin/donations',
+      name: 'adminDonations',
+      builder: (c, s) => const AdminDonationsScreen(),
+    ),
+    GoRoute(
+      path: '/admin/donation-detail',
+      name: 'adminDonationDetail',
+      builder: (c, s) => DonationDetailScreen(donation: s.extra as Map<String, dynamic>),
+    ),
+    GoRoute(
+      path: '/admin/donation-reports',
+      name: 'adminDonationReports',
+      builder: (c, s) => const DonationReportsScreen(),
     ),
     GoRoute(
       path: '/notifications',

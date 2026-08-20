@@ -36,6 +36,10 @@ class AuthService {
     await _api.post('/auth/request-otp', data: {'phone': phone});
   }
 
+  Future<void> verifyOtpOnly({required String phone, required String otp}) async {
+    await _api.post('/auth/verify-otp', data: {'phone': phone, 'otp': otp});
+  }
+
   Future<Map<String, dynamic>> setPassword({
     required String phone,
     required String otp,

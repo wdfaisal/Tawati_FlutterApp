@@ -5,16 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 
 class ActivationSuccessScreen extends StatelessWidget {
-  final String userName;
-  final bool needsFamilySetup;
-  final String? userId;
-
-  const ActivationSuccessScreen({
-    super.key,
-    this.userName = '',
-    this.needsFamilySetup = false,
-    this.userId,
-  });
+  const ActivationSuccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +50,7 @@ class ActivationSuccessScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
                       const Text(
-                        'تم تفعيل حسابك بنجاح',
+                        'تم إنشاء حسابك بنجاح',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'IBMPlexSansArabic',
@@ -70,12 +61,10 @@ class ActivationSuccessScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        userName.isEmpty
-                            ? 'يمكنك الآن تسجيل الدخول باستخدام كلمة المرور التي اخترتها'
-                            : 'أهلًا بك $userName، يمكنك الآن تسجيل الدخول',
+                      const Text(
+                        'يمكنك الآن تسجيل الدخول باستخدام كلمة المرور التي اخترتها',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'IBMPlexSansArabic',
                           fontSize: 14,
                           color: Color(0xFFC9DCE8),

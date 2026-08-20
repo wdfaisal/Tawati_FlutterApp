@@ -101,6 +101,43 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> verifyOtpOnly({required String phone, required String otp}) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _authService.verifyOtpOnly(phone: phone, otp: otp);
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: _friendlyError(e),
+      );
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> setPassword({
+    required String phone,
+    required String otp,
+    required String password,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final result = await _authService.setPassword(
+        phone: phone,
+        otp: otp,
+        password: password,
+      );
+      state = state.copyWith(isLoading: false);
+      return result;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: _friendlyError(e),
+      );
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> setPinAndLogin({
     required String phone,
     required String otp,
