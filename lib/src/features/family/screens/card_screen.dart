@@ -126,6 +126,7 @@ class CardScreen extends ConsumerWidget {
             const SizedBox(height: 18),
             _buildDetailsSection(
               fullName: user.fullNameAr,
+              nationalId: user.nationalId ?? '—',
               dob: user.dateOfBirth,
             ),
             const SizedBox(height: 24),
@@ -193,7 +194,7 @@ class CardScreen extends ConsumerWidget {
                               fullName: fullName,
                               memberNumber: memberNumber,
                               joinedAt: joinedAt,
-                              membershipLevel: user?.membershipLabel ?? 'عضو',
+                              membershipLevel: membershipLevel,
                             ),
                           ),
                         ),
@@ -215,12 +216,12 @@ class CardScreen extends ConsumerWidget {
 
   Widget _buildDetailsSection({
     required String fullName,
+    required String nationalId,
     DateTime? dob,
   }) {
     final dobStr = dob != null
         ? '${dob.day.toString().padLeft(2, '0')}/${dob.month.toString().padLeft(2, '0')}/${dob.year}'
         : '—';
-    final nationalId = user.nationalId ?? '—';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,6 +343,7 @@ class CardScreen extends ConsumerWidget {
 class _DetailGridRow extends StatelessWidget {
   final String label1;
   final String value1;
+  final Color? value1Color;
   final String label2;
   final String value2;
   final Color? value2Color;
@@ -349,6 +351,7 @@ class _DetailGridRow extends StatelessWidget {
   const _DetailGridRow({
     required this.label1,
     required this.value1,
+    this.value1Color,
     required this.label2,
     required this.value2,
     this.value2Color,
@@ -375,11 +378,11 @@ class _DetailGridRow extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   value1,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'IBMPlexSansArabic',
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: value1Color ?? AppColors.textPrimary,
                   ),
                 ),
               ],
@@ -506,9 +509,9 @@ class _DigitalCard extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(width: 5),
-                                const Text(
+                                Text(
                                   membershipLevel,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontFamily: 'IBMPlexSansArabic',
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
