@@ -20,12 +20,16 @@ class ChildData {
   String gender;
   int? age;
   String? nationalId;
+  String phone;
+  DateTime? dateOfBirth;
 
   ChildData({
     this.fullName = '',
     this.gender = 'male',
     this.age,
     this.nationalId,
+    this.phone = '',
+    this.dateOfBirth,
   });
 }
 
@@ -63,6 +67,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   String _maritalStatus = 'single';
   final _spouseNameCtrl = TextEditingController();
+  final _spousePhoneCtrl = TextEditingController();
+  final _spouseNationalIdCtrl = TextEditingController();
+  DateTime? _spouseDateOfBirth;
   bool _hasChildren = false;
   int _childCount = 0;
   final List<ChildData> _children = [];
@@ -409,6 +416,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         'fullNameAr': fullName,
         'phone': normalizePhone(_phoneCtrl.text),
         'nationalId': _nationalIdCtrl.text.trim().isEmpty ? null : _nationalIdCtrl.text.trim(),
+        'dateOfBirth': _selectedDate?.toIso8601String(),
         'age': _selectedDate != null ? DateTime.now().year - _selectedDate!.year : null,
         'maritalStatus': _maritalStatus,
         'spouseName': spouseName,
@@ -418,9 +426,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         'childCount': _childCount,
         'children': _children.map((c) => {
           'fullName': c.fullName.trim(),
+          'phone': normalizePhone(c.phone),
           'gender': c.gender,
           'age': c.age,
           'nationalId': c.nationalId?.trim().isEmpty == true ? null : c.nationalId?.trim(),
+          'dateOfBirth': c.dateOfBirth?.toIso8601String(),
+          'maritalStatus': 'single',
         }).toList(),
         'surveyAnswers': _surveyAnswers,
       });
@@ -993,6 +1004,65 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
                         decoration: _inputDecoration(hint: 'الاسم - الأب - الجد - العائلة'),
                       ),
+                      const SizedBox(height: 16),
+                      _buildLabel('رقم جوال الزوجة *'),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _spousePhoneCtrl,
+                        keyboardType: TextInputType.phone,
+                        textDirection: TextDirection.ltr,
+                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
+                        decoration: _inputDecoration(hint: '9XXXXXXXX'),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildLabel('رقم هوية الزوجة (اختياري)'),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _spouseNationalIdCtrl,
+                        keyboardType: TextInputType.number,
+                        textDirection: TextDirection.ltr,
+                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
+                        decoration: _inputDecoration(hint: 'رقم الهوية'),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildLabel('تاريخ ميلاد الزوجة (اختياري)'),
+                      const SizedBox(height: 6),
+                      GestureDetector(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _spouseDateOfBirth ?? DateTime(1990),
+                            firstDate: DateTime(1920),
+                            lastDate: DateTime.now(),
+                            locale: const Locale('ar'),
+                          );
+                          if (picked != null) setState(() => _spouseDateOfBirth = picked);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.textHint),
+                              const SizedBox(width: 12),
+                              Text(
+                                _spouseDateOfBirth != null
+                                    ? '${_spouseDateOfBirth!.day}/${_spouseDateOfBirth!.month}/${_spouseDateOfBirth!.year}'
+                                    : 'اختر التاريخ',
+                                style: TextStyle(
+                                  fontFamily: 'IBMPlexSansArabic',
+                                  fontSize: 15,
+                                  color: _spouseDateOfBirth != null ? AppColors.textPrimary : AppColors.textHint,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   )
                 : const SizedBox(width: double.infinity),
@@ -1351,13 +1421,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             _buildReviewRow('الاسم', fullName),
             _buildReviewRow('الجوال', '${_selectedCountry.dialCode} ${_phoneCtrl.text.trim()}'),
             if (_nationalIdCtrl.text.trim().isNotEmpty) _buildReviewRow('الهوية', _nationalIdCtrl.text.trim()),
-            _buildReviewRow('العمر', ageStr),
+            if (_selectedDate != null) _buildReviewRow('تاريخ الميلاد', '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'),
             _buildReviewRow('النوع', _gender == 'male' ? 'ذكر' : 'أنثى'),
           ]),
           const SizedBox(height: 12),
           _buildReviewSection('الحالة الاجتماعية', [
             _buildReviewRow('الحالة', _maritalStatusLabel()),
             if (spouseName != null) _buildReviewRow('اسم الزوج/الزوجة', spouseName),
+            if (spouseName != null && _spousePhoneCtrl.text.trim().isNotEmpty)
+              _buildReviewRow('جوال الزوج/الزوجة', _spousePhoneCtrl.text.trim()),
+            if (spouseName != null && _spouseNationalIdCtrl.text.trim().isNotEmpty)
+              _buildReviewRow('هوية الزوج/الزوجة', _spouseNationalIdCtrl.text.trim()),
             _buildReviewRow('أبناء', _hasChildren ? 'نعم ($_childCount)' : 'لا'),
           ]),
           if (_hasChildren && _children.isNotEmpty) ...[
@@ -1791,6 +1865,62 @@ class _CollapsibleChildCardState extends State<_CollapsibleChildCard> {
                             child.nationalId = v;
                             widget.onFieldChanged();
                           },
+                        ),
+                        const SizedBox(height: 12),
+                        _label('رقم جوال الابن *'),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          initialValue: child.phone,
+                          keyboardType: TextInputType.phone,
+                          textDirection: TextDirection.ltr,
+                          style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15),
+                          decoration: _fieldDecoration('9XXXXXXXX'),
+                          onChanged: (v) {
+                            child.phone = v;
+                            widget.onFieldChanged();
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _label('تاريخ الميلاد (اختياري)'),
+                        const SizedBox(height: 6),
+                        GestureDetector(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: child.dateOfBirth ?? DateTime(2005),
+                              firstDate: DateTime(1950),
+                              lastDate: DateTime.now(),
+                              locale: const Locale('ar'),
+                            );
+                            if (picked != null) {
+                              setState(() => child.dateOfBirth = picked);
+                              widget.onFieldChanged();
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textHint),
+                                const SizedBox(width: 8),
+                                Text(
+                                  child.dateOfBirth != null
+                                      ? '${child.dateOfBirth!.day}/${child.dateOfBirth!.month}/${child.dateOfBirth!.year}'
+                                      : 'اختر التاريخ',
+                                  style: TextStyle(
+                                    fontFamily: 'IBMPlexSansArabic',
+                                    fontSize: 14,
+                                    color: child.dateOfBirth != null ? AppColors.textPrimary : AppColors.textHint,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
                       ],

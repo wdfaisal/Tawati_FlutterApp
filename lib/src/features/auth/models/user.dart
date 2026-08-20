@@ -14,6 +14,7 @@
   final DateTime? dateOfBirth;
   final String? gender;
   final String? maritalStatus;
+  final String? membershipLevel;
   final DateTime? joinedAt;
   final DateTime createdAt;
 
@@ -33,6 +34,7 @@
     this.dateOfBirth,
     this.gender,
     this.maritalStatus,
+    this.membershipLevel,
     this.joinedAt,
     required this.createdAt,
   });
@@ -53,6 +55,7 @@
     dateOfBirth: json['date_of_birth'] != null ? DateTime.tryParse(json['date_of_birth']) : null,
     gender: json['gender'],
     maritalStatus: json['marital_status'],
+    membershipLevel: json['membership_level'],
     joinedAt: json['joined_at'] != null ? DateTime.tryParse(json['joined_at']) : null,
     createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
   );
@@ -69,5 +72,7 @@
 
   bool get isActive => status == 'active';
   bool get isAdmin => role == 'super_admin' || role == 'admin';
-  bool get isFamilyHead => role == 'family_head';
+  bool get isFamilyHead => role == 'head_of_family';
+
+  String get membershipLabel => membershipLevel ?? 'عضو';
 }

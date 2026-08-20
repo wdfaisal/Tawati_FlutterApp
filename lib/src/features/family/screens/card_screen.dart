@@ -95,6 +95,7 @@ class CardScreen extends ConsumerWidget {
                 fullName: user.fullNameAr,
                 memberNumber: user.memberNumber ?? '—',
                 joinedAt: joinedAtStr,
+                membershipLevel: user.membershipLabel,
               ),
               child: Hero(
                 tag: 'digital-card',
@@ -102,6 +103,7 @@ class CardScreen extends ConsumerWidget {
                   fullName: user.fullNameAr,
                   memberNumber: user.memberNumber ?? '—',
                   joinedAt: joinedAtStr,
+                  membershipLevel: user.membershipLabel,
                 ),
               ),
             ),
@@ -140,6 +142,7 @@ class CardScreen extends ConsumerWidget {
     required String fullName,
     required String memberNumber,
     required String joinedAt,
+    required String membershipLevel,
   }) {
     showGeneralDialog<void>(
       context: context,
@@ -190,6 +193,7 @@ class CardScreen extends ConsumerWidget {
                               fullName: fullName,
                               memberNumber: memberNumber,
                               joinedAt: joinedAt,
+                              membershipLevel: user?.membershipLabel ?? 'عضو',
                             ),
                           ),
                         ),
@@ -216,6 +220,7 @@ class CardScreen extends ConsumerWidget {
     final dobStr = dob != null
         ? '${dob.day.toString().padLeft(2, '0')}/${dob.month.toString().padLeft(2, '0')}/${dob.year}'
         : '—';
+    final nationalId = user.nationalId ?? '—';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,9 +263,16 @@ class CardScreen extends ConsumerWidget {
               _DetailGridRow(
                 label1: 'تاريخ الميلاد',
                 value1: dobStr,
-                label2: 'تاريخ الانتهاء',
-                value2: '31/12/2025',
-                value2Color: AppColors.primary,
+                label2: 'رقم الهوية',
+                value2: nationalId,
+              ),
+              _divider(),
+              _DetailGridRow(
+                label1: 'نوع العضوية',
+                value1: user.membershipLabel,
+                value1Color: AppColors.primary,
+                label2: 'رقم العضوية',
+                value2: user.memberNumber ?? '—',
               ),
             ],
           ),
@@ -408,11 +420,13 @@ class _DigitalCard extends StatelessWidget {
   final String fullName;
   final String memberNumber;
   final String joinedAt;
+  final String membershipLevel;
 
   const _DigitalCard({
     required this.fullName,
     required this.memberNumber,
     required this.joinedAt,
+    required this.membershipLevel,
   });
 
   @override
@@ -493,7 +507,7 @@ class _DigitalCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 5),
                                 const Text(
-                                  'عضو نشط',
+                                  membershipLevel,
                                   style: TextStyle(
                                     fontFamily: 'IBMPlexSansArabic',
                                     fontSize: 11,
