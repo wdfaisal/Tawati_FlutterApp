@@ -127,6 +127,8 @@ class CardScreen extends ConsumerWidget {
             _buildDetailsSection(
               fullName: user.fullNameAr,
               nationalId: user.nationalId ?? '—',
+              membershipLabel: user.membershipLabel,
+              memberNumber: user.memberNumber ?? '—',
               dob: user.dateOfBirth,
             ),
             const SizedBox(height: 24),
@@ -217,6 +219,8 @@ class CardScreen extends ConsumerWidget {
   Widget _buildDetailsSection({
     required String fullName,
     required String nationalId,
+    required String membershipLabel,
+    required String memberNumber,
     DateTime? dob,
   }) {
     final dobStr = dob != null
@@ -270,10 +274,10 @@ class CardScreen extends ConsumerWidget {
               _divider(),
               _DetailGridRow(
                 label1: 'نوع العضوية',
-                value1: user.membershipLabel,
+                value1: membershipLabel,
                 value1Color: AppColors.primary,
                 label2: 'رقم العضوية',
-                value2: user.memberNumber ?? '—',
+                value2: memberNumber,
               ),
             ],
           ),
