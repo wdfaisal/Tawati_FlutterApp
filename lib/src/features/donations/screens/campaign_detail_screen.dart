@@ -306,8 +306,6 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
             ],
           ),
         ),
-        if (_campaign != null && _campaign!.isActive)
-          _buildBottomCta(),
       ],
     );
   }

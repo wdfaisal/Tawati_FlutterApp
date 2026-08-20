@@ -637,7 +637,8 @@ class _AnnouncementsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return newsAsync.when(
       data: (list) {
-        final items = list.where((n) => n.isAnnouncement).toList();
+        final items = list.where((n) => n.isAnnouncement).toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
         if (items.isEmpty) return const SizedBox.shrink();
         return _sectionPadding(
           child: Column(
@@ -646,7 +647,7 @@ class _AnnouncementsSection extends StatelessWidget {
               _SectionHeader(title: 'آخر الإعلانات', actionLabel: 'عرض الكل', onAction: onOpenAll, titleSize: 16),
               const SizedBox(height: 12),
               SizedBox(
-                height: 218,
+                height: 240,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -718,7 +719,7 @@ class _AnnouncementCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -734,6 +735,27 @@ class _AnnouncementCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kSecondary),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.person_outline, size: 12, color: _kMuted),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: Text(
+                          item.createdByName ?? 'غير معروف',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kMuted),
+                        ),
+                      ),
+                      const Icon(Icons.access_time_rounded, size: 12, color: _kMuted),
+                      const SizedBox(width: 3),
+                      Text(
+                        _formatDate(item.createdAt),
+                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kMuted),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -905,15 +927,21 @@ class _DeathsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return newsAsync.when(
       data: (list) {
-        final deaths = list.where((n) => n.isDeath).toList();
+        final deaths = list.where((n) => n.isDeath).toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
         if (deaths.isEmpty) return const SizedBox.shrink();
+        final topDeaths = deaths.take(3).toList();
         return _sectionPadding(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _SectionHeader(title: 'الوفيات الأخيرة', actionLabel: 'عرض الكل', onAction: onOpenAll),
               const SizedBox(height: 12),
-              _DeathCard(item: deaths.first),
+              for (var i = 0; i < topDeaths.length; i++)
+                _DeathCard(
+                  item: topDeaths[i],
+                  showBorder: i < topDeaths.length - 1,
+                ),
             ],
           ),
         );
@@ -926,8 +954,9 @@ class _DeathsSection extends StatelessWidget {
 
 class _DeathCard extends StatelessWidget {
   final News item;
+  final bool showBorder;
 
-  const _DeathCard({required this.item});
+  const _DeathCard({required this.item, this.showBorder = false});
 
   @override
   Widget build(BuildContext context) {
@@ -937,7 +966,11 @@ class _DeathCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: _kSoftBg, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          color: _kSoftBg,
+          borderRadius: BorderRadius.circular(16),
+          border: showBorder ? const Border(bottom: BorderSide(color: Colors.white, width: 2)) : null,
+        ),
         child: Row(
           children: [
             Container(
@@ -960,6 +993,11 @@ class _DeathCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: _kNameColor),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'تاريخ الوفاة: ${_formatDate(item.createdAt)}',
+                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kMuted),
                   ),
                   if (subtitle.isNotEmpty) ...[
                     const SizedBox(height: 3),

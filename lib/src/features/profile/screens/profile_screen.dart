@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Family;
 import 'package:go_router/go_router.dart';
 
-import 'package:tawati_mobile/src/core/biometric_service.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 
@@ -16,11 +15,13 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isDarkMode = false;
   bool _biometricEnabled = false;
+  int _myAnnouncementsCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadBiometricState();
+    _loadMyAnnouncementsCount();
   }
 
   Future<void> _loadBiometricState() async {
@@ -29,6 +30,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (mounted) {
       setState(() => _biometricEnabled = enabled);
     }
+  }
+
+  Future<void> _loadMyAnnouncementsCount() async {
+    try {
+      final items = await ref.read(newsServiceProvider).getMyNews(limit: 100);
+      if (mounted) {
+        setState(() => _myAnnouncementsCount = items.length);
+      }
+    } catch (_) {}
   }
 
   Future<void> _toggleBiometric(bool value) async {
@@ -194,6 +204,88 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 _buildInfoTile('اسم العائلة', familyName),
                 _buildInfoTile('رب الأسرة', familyHeadName),
                 _buildInfoTile('الدور', role),
+              ],
+            ),
+            _buildSectionCard(
+              title: 'نشاطي',
+              icon: Icons.dashboard_outlined,
+              children: [
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.campaign_outlined, color: Color(0xFF0D9488), size: 20),
+                  ),
+                  title: const Text(
+                    'إعلاناتي',
+                    style: TextStyle(
+                      fontFamily: 'IBMPlexSansArabic',
+                      fontSize: 15,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '$_myAnnouncementsCount إعلان منشور',
+                    style: const TextStyle(
+                      fontFamily: 'IBMPlexSansArabic',
+                      fontSize: 12,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$_myAnnouncementsCount',
+                      style: const TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0D9488),
+                      ),
+                    ),
+                  ),
+                  onTap: () => context.push('/my-announcements'),
+                ),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.volunteer_activism_outlined, color: Color(0xFF0D9488), size: 20),
+                  ),
+                  title: const Text(
+                    'تبرعاتي',
+                    style: TextStyle(
+                      fontFamily: 'IBMPlexSansArabic',
+                      fontSize: 15,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'سجل التبرعات والمساهمات',
+                    style: TextStyle(
+                      fontFamily: 'IBMPlexSansArabic',
+                      fontSize: 12,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Color(0xFF94A3B8),
+                  ),
+                  onTap: () => context.push('/my-donations'),
+                ),
               ],
             ),
             _buildSectionCard(

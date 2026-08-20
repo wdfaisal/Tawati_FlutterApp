@@ -8,6 +8,10 @@ import 'package:tawati_mobile/src/features/auth/screens/register_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/pending_review_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/welcome_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/otp_verification_screen.dart';
+import 'package:tawati_mobile/src/features/auth/screens/activation_otp_screen.dart';
+import 'package:tawati_mobile/src/features/auth/screens/activation_password_screen.dart';
+import 'package:tawati_mobile/src/features/auth/screens/activation_success_screen.dart';
+import 'package:tawati_mobile/src/features/auth/screens/pending_approval_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/home_screen.dart';
 import 'package:tawati_mobile/src/features/news/screens/news_tab.dart';
 import 'package:tawati_mobile/src/features/news/screens/news_detail_screen.dart';
@@ -108,6 +112,69 @@ final appRouter = GoRouter(
         return CustomTransitionPage(
           key: state.pageKey,
           child: PendingReviewScreen(requestId: requestId),
+          transitionDuration: const Duration(milliseconds: 350),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+            return FadeTransition(
+              opacity: curved,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.94, end: 1).animate(curved),
+                child: child,
+              ),
+            );
+          },
+        );
+      },
+    ),
+    GoRoute(
+      path: '/activation-otp',
+      name: 'activationOtp',
+      builder: (c, s) {
+        final phone = s.extra as String? ?? '';
+        return ActivationOtpScreen(phone: phone);
+      },
+    ),
+    GoRoute(
+      path: '/activation-password',
+      name: 'activationPassword',
+      builder: (c, s) {
+        final phone = s.extra as String? ?? '';
+        return ActivationPasswordScreen(phone: phone);
+      },
+    ),
+    GoRoute(
+      path: '/activation-success',
+      name: 'activationSuccess',
+      pageBuilder: (context, state) {
+        final extra = state.extra as Map?;
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: ActivationSuccessScreen(
+            userName: extra?['name'] as String? ?? '',
+            needsFamilySetup: extra?['needsSetup'] as bool? ?? false,
+            userId: extra?['userId'] as String?,
+          ),
+          transitionDuration: const Duration(milliseconds: 400),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+            return FadeTransition(
+              opacity: curved,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.9, end: 1).animate(curved),
+                child: child,
+              ),
+            );
+          },
+        );
+      },
+    ),
+    GoRoute(
+      path: '/pending-approval',
+      name: 'pendingApproval',
+      pageBuilder: (context, state) {
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: const PendingApprovalScreen(),
           transitionDuration: const Duration(milliseconds: 350),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);

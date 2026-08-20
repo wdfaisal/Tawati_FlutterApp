@@ -39,6 +39,11 @@ class AuthState {
   }
 }
 
+class PhoneCheckResult {
+  final String status;
+  PhoneCheckResult({required this.status});
+}
+
 class AuthNotifier extends StateNotifier<AuthState> {
   final Ref _ref;
 
@@ -46,6 +51,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   AuthService get _authService => _ref.read(authServiceProvider);
   ApiClient get _apiClient => _ref.read(apiClientProvider);
+
+  Future<PhoneCheckResult> checkPhone({required String phone}) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final result = await _authService.checkPhone(phone: phone);
+      state = state.copyWith(isLoading: false);
+      return PhoneCheckResult(status: result['status']);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: _friendlyError(e),
+      );
+      rethrow;
+    }
+  }
 
   Future<void> login({
     required String phone,

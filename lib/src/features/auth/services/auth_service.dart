@@ -6,6 +6,16 @@ class AuthService {
 
   AuthService(this._api);
 
+  Future<Map<String, dynamic>> checkPhone({required String phone}) async {
+    final response = await _api.post('/auth/check-phone', data: {
+      'phone': phone,
+    });
+    final data = response.data['data'];
+    return {
+      'status': data['status'] as String,
+    };
+  }
+
   Future<Map<String, dynamic>> login({
     required String phone,
     required String password,
