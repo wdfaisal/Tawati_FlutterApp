@@ -33,6 +33,53 @@ class _ActivationPasswordScreenState extends ConsumerState<ActivationPasswordScr
   bool _hasLetters(String s) => RegExp(r'[a-zA-Z]').hasMatch(s);
   bool _hasNumbers(String s) => RegExp(r'[0-9]').hasMatch(s);
 
+  Widget _buildStepIndicator(int currentStep) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (i) {
+        final step = i + 1;
+        final isActive = step == currentStep;
+        final isDone = step < currentStep;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isActive
+                    ? AppColors.primary
+                    : isDone
+                        ? AppColors.success
+                        : AppColors.border,
+              ),
+              child: Center(
+                child: isDone
+                    ? const Icon(Icons.check, size: 16, color: Colors.white)
+                    : Text(
+                        '$step',
+                        style: TextStyle(
+                          fontFamily: 'IBMPlexSansArabic',
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isActive ? Colors.white : AppColors.textSecondary,
+                        ),
+                      ),
+              ),
+            ),
+            if (i < 2)
+              Container(
+                width: 40,
+                height: 2,
+                color: isDone ? AppColors.success : AppColors.border,
+              ),
+          ],
+        );
+      }),
+    );
+  }
+
   Future<void> _setPassword() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -78,14 +125,7 @@ class _ActivationPasswordScreenState extends ConsumerState<ActivationPasswordScr
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(color: AppColors.primaryLight, shape: BoxShape.circle),
-                    child: const Icon(Icons.lock_outline, size: 40, color: AppColors.primary),
-                  ),
-                ),
+                Center(child: _buildStepIndicator(3)),
                 const SizedBox(height: 20),
                 const Center(
                   child: Text('تعيين كلمة المرور الجديدة',

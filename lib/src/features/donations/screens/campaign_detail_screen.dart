@@ -267,6 +267,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
     final campaign = _campaign!;
     final fmt = NumberFormat('#,##0');
     final percent = (campaign.progress * 100).toInt();
+    final remaining = campaign.targetAmount - campaign.collectedAmount;
 
     return Column(
       children: [
@@ -279,14 +280,11 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
                   children: [
                     _buildHero(campaign),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Transform.translate(
-                        offset: const Offset(0, -56),
-                        child: _buildProgressCard(campaign, fmt, percent),
-                      ),
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+                      child: _buildProgressInline(campaign, fmt, percent, remaining),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                       child: _buildAboutSection(campaign, fmt),
                     ),
                     Padding(
@@ -352,96 +350,101 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
     );
   }
 
-  Widget _buildProgressCard(Campaign campaign, NumberFormat fmt, int percent) {
+  Widget _buildProgressInline(Campaign campaign, NumberFormat fmt, int percent, double remaining) {
     final progress = campaign.progress;
-    final remaining = campaign.targetAmount - campaign.collectedAmount;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF044465).withValues(alpha: 0.08),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text(
+          campaign.title,
+          style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.w700, color: _kDark),
+        ),
+        if (campaign.fundName != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            campaign.fundName!,
+            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: _kMuted),
           ),
         ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('المبلغ المستهدف', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted)),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${fmt.format(campaign.targetAmount)} ج.س',
-                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 20, fontWeight: FontWeight.w700, color: _kPrimary),
-                    ),
-                  ],
-                ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('تم جمع', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted)),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${fmt.format(campaign.collectedAmount)} ج.س',
+                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 22, fontWeight: FontWeight.w700, color: _kPrimary),
+                  ),
+                ],
               ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Text('تم جمع', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted)),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${fmt.format(campaign.collectedAmount)} ج.س',
-                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.w700, color: _kPrimary),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 12,
-              backgroundColor: _kSurface,
-              valueColor: const AlwaysStoppedAnimation(_kPrimary),
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Text(
-                'متبقي ${fmt.format(remaining < 0 ? 0 : remaining)} ج.س',
-                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted),
+            Container(
+              width: 1,
+              height: 40,
+              color: _kBorder,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('المبلغ المستهدف', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted)),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${fmt.format(campaign.targetAmount)} ج.س',
+                    style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 18, fontWeight: FontWeight.w700, color: _kDark),
+                  ),
+                ],
               ),
-              const Spacer(),
-              Text(
-                '$percent% اكتمل',
-                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kPrimary),
-              ),
-            ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 10,
+            backgroundColor: _kSurface,
+            valueColor: const AlwaysStoppedAnimation(_kPrimary),
           ),
-          const SizedBox(height: 20),
-          const Divider(height: 1, color: _kBorder),
-          const SizedBox(height: 20),
-          Row(
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Text(
+              'متبقي ${fmt.format(remaining < 0 ? 0 : remaining)} ج.س',
+              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: _kMuted),
+            ),
+            const Spacer(),
+            Text(
+              '$percent% اكتمل',
+              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w600, color: _kPrimary),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: _kSurface,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
             children: [
               _buildStatItem(Icons.groups_outlined, 'عدد المتبرعين', _toArabicDigits(campaign.donorCount ?? 0)),
               const Spacer(),
               _buildStatItem(Icons.schedule_outlined, 'الأيام المتبقية', _daysLeftLabel(campaign)),
             ],
           ),
-          const SizedBox(height: 20),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

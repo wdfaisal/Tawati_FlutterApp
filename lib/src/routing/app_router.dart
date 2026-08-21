@@ -8,6 +8,7 @@ import 'package:tawati_mobile/src/features/auth/screens/register_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/pending_review_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/welcome_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/otp_verification_screen.dart';
+import 'package:tawati_mobile/src/features/auth/screens/activation_phone_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/activation_otp_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/activation_password_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/activation_success_screen.dart';
@@ -128,6 +129,11 @@ final appRouter = GoRouter(
           },
         );
       },
+    ),
+    GoRoute(
+      path: '/activation-phone',
+      name: 'activationPhone',
+      builder: (c, s) => const ActivationPhoneScreen(),
     ),
     GoRoute(
       path: '/activation-otp',

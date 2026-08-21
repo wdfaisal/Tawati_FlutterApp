@@ -474,8 +474,8 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-Widget _sectionPadding({required Widget child}) {
-  return Padding(padding: const EdgeInsets.only(top: 28), child: child);
+Widget _sectionPadding({required Widget child, double topPadding = 28}) {
+  return Padding(padding: EdgeInsets.only(top: topPadding), child: child);
 }
 
 class _CampaignsSection extends StatelessWidget {
@@ -932,15 +932,19 @@ class _DeathsSection extends StatelessWidget {
         if (deaths.isEmpty) return const SizedBox.shrink();
         final topDeaths = deaths.take(3).toList();
         return _sectionPadding(
+          topPadding: 40,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _SectionHeader(title: 'الوفيات الأخيرة', actionLabel: 'عرض الكل', onAction: onOpenAll),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               for (var i = 0; i < topDeaths.length; i++)
-                _DeathCard(
-                  item: topDeaths[i],
-                  showBorder: i < topDeaths.length - 1,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _DeathCard(
+                    item: topDeaths[i],
+                    showBorder: i < topDeaths.length - 1,
+                  ),
                 ),
             ],
           ),

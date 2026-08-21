@@ -359,6 +359,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onTap: () => _comingSoon(),
           ),
           _buildMenuTile(
+            icon: Icons.volunteer_activism_outlined,
+            title: 'سجل تبرعاتي',
+            onTap: () => context.pushNamed('myDonations'),
+          ),
+          _buildMenuTile(
             icon: Icons.people_alt_outlined,
             title: 'مناسباتي',
             onTap: () => _comingSoon(),

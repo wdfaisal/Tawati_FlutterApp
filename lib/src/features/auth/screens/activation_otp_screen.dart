@@ -128,7 +128,9 @@ class _ActivationOtpScreenState extends ConsumerState<ActivationOtpScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              const SizedBox(height: 48),
+              const SizedBox(height: 24),
+              _buildStepIndicator(2),
+              const SizedBox(height: 24),
               Container(
                 width: 80,
                 height: 80,
@@ -206,6 +208,53 @@ class _ActivationOtpScreenState extends ConsumerState<ActivationOtpScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildStepIndicator(int currentStep) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (i) {
+        final step = i + 1;
+        final isActive = step == currentStep;
+        final isDone = step < currentStep;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isActive
+                    ? AppColors.primary
+                    : isDone
+                        ? AppColors.success
+                        : AppColors.border,
+              ),
+              child: Center(
+                child: isDone
+                    ? const Icon(Icons.check, size: 16, color: Colors.white)
+                    : Text(
+                        '$step',
+                        style: TextStyle(
+                          fontFamily: 'IBMPlexSansArabic',
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isActive ? Colors.white : AppColors.textSecondary,
+                        ),
+                      ),
+              ),
+            ),
+            if (i < 2)
+              Container(
+                width: 40,
+                height: 2,
+                color: isDone ? AppColors.success : AppColors.border,
+              ),
+          ],
+        );
+      }),
     );
   }
 

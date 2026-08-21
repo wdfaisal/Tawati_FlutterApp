@@ -531,6 +531,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ],
                           const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              const Expanded(child: Divider(color: AppColors.border)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'أو',
+                                  style: TextStyle(
+                                    fontFamily: 'IBMPlexSansArabic',
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                              ),
+                              const Expanded(child: Divider(color: AppColors.border)),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
                           GestureDetector(
                             onTap: () => context.pushNamed('register'),
                             child: Container(
@@ -570,7 +588,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 12),
                           Center(
                             child: GestureDetector(
-                              onTap: () => context.pushNamed('activationOtp', extra: _normalizedPhone),
+                              onTap: () => context.pushNamed('activationPhone'),
                               child: const Text(
                                 'أول تسجيل دخول؟',
                                 style: TextStyle(

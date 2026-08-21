@@ -21,6 +21,7 @@ class _AdminDonationsScreenState extends ConsumerState<AdminDonationsScreen> {
   List<Campaign> _campaigns = [];
   Campaign? _selectedCampaign;
   bool _loading = true;
+  String? _error;
   String _filter = 'الكل';
   String _query = '';
 
@@ -37,7 +38,7 @@ class _AdminDonationsScreenState extends ConsumerState<AdminDonationsScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try {
       final service = ref.read(adminDonationServiceProvider);
       final results = await Future.wait([
@@ -51,7 +52,7 @@ class _AdminDonationsScreenState extends ConsumerState<AdminDonationsScreen> {
         _loading = false;
       });
     } catch (e) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() { _loading = false; _error = e.toString(); });
     }
   }
 
@@ -106,7 +107,7 @@ class _AdminDonationsScreenState extends ConsumerState<AdminDonationsScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: Colors.white,
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => context.push('/admin/donation-reports'),
           backgroundColor: AppColors.primary,
@@ -120,7 +121,26 @@ class _AdminDonationsScreenState extends ConsumerState<AdminDonationsScreen> {
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                  : RefreshIndicator(
+                  : _error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline, size: 48, color: Color(0xFFEF4444)),
+                              const SizedBox(height: 12),
+                              const Text('حدث خطأ في تحميل البيانات', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15, color: Color(0xFF62707B))),
+                              const SizedBox(height: 8),
+                              Text(_error!, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Color(0xFF94A3B8)), textAlign: TextAlign.center),
+                              const SizedBox(height: 16),
+                              TextButton.icon(
+                                onPressed: _loadData,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('إعادة المحاولة', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
                       onRefresh: _loadData,
                       child: ListView(
                         padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 80),
@@ -142,53 +162,24 @@ class _AdminDonationsScreenState extends ConsumerState<AdminDonationsScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 12, 24, 0),
+      padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 8, 16, 12),
       decoration: const BoxDecoration(color: Colors.white),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () => context.pop(),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(color: Color(0xFFF1F5F8), shape: BoxShape.circle),
-                  child: const Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.primary),
-                ),
-              ),
-              const Spacer(),
-              SizedBox(
-                width: 100,
-                height: 40,
-                child: Image.asset('assets/images/splash_logo.png', fit: BoxFit.contain),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Container(width: 48, height: 4, decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
-              const Spacer(),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              'إدارة التبرعات',
-              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.primary),
+          GestureDetector(
+            onTap: () => context.pop(),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(color: Color(0xFFF1F5F8), shape: BoxShape.circle),
+              child: const Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.primary),
             ),
           ),
-          const SizedBox(height: 4),
-          const Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              'مراجعة ومراقبة المساهمات المالية',
-              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Color(0xFF9CAFB8)),
-            ),
+          const SizedBox(width: 12),
+          const Text(
+            'إدارة التبرعات',
+            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
           ),
-          const SizedBox(height: 16),
         ],
       ),
     );

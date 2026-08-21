@@ -133,6 +133,54 @@ class NavSection extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text(
+              'إجراءات سريعة',
+              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textHint),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _QuickActionDrawerTile(
+                    icon: Icons.campaign_outlined,
+                    label: 'إضافة إعلان',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.pushNamed('addAnnouncement');
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _QuickActionDrawerTile(
+                    icon: Icons.description_outlined,
+                    label: 'إضافة وفاة',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.pushNamed('addObituary');
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _QuickActionDrawerTile(
+                    icon: Icons.volunteer_activism_outlined,
+                    label: 'تبرع',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.pushNamed('donations');
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: 8),
           _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'الرئيسية', route: 'home', onTap: onNavigate),
           const SizedBox(height: 4),
           _NavItem(icon: Icons.badge_outlined, activeIcon: Icons.badge, label: 'الهوية الرقمية', route: 'familyTree', onTap: onNavigate),
@@ -204,6 +252,44 @@ class _NavItem extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                   color: AppColors.textPrimary,
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionDrawerTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickActionDrawerTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primaryLight,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            children: [
+              Icon(icon, size: 20, color: AppColors.primary),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
