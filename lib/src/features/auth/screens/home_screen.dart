@@ -34,6 +34,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    ref.read(fcmServiceProvider).initialize();
+  }
+
   void _openTab(String title) {
     if (!mounted) return;
     final index = _visibleTabs(ref.read(appConfigProvider)).indexWhere((t) => t.title == title);

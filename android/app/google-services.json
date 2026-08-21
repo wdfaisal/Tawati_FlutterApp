@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "781668544485",
+    "project_id": "tawatiapp",
+    "storage_bucket": "tawatiapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:781668544485:android:7f0d4c274eb4953ffa890c",
+        "android_client_info": {
+          "package_name": "com.tawati.tawati_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJB3S_LFMPc7xAXj-c202igPlu2Q7dcU8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -25,7 +25,7 @@ class AppDrawer extends ConsumerWidget {
             NavSection(onNavigate: (route) {
               Navigator.of(context).pop();
               context.pushNamed(route);
-            }),
+            }, isAdmin: user?.isAdmin ?? false),
             BottomSection(onSignOut: () async {
               Navigator.of(context).pop();
               await ref.read(authProvider.notifier).logout();
@@ -123,8 +123,9 @@ class HeaderSection extends StatelessWidget {
 
 class NavSection extends StatelessWidget {
   final void Function(String route) onNavigate;
+  final bool isAdmin;
 
-  const NavSection({super.key, required this.onNavigate});
+  const NavSection({super.key, required this.onNavigate, this.isAdmin = false});
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +140,10 @@ class NavSection extends StatelessWidget {
           _NavItem(icon: Icons.volunteer_activism_outlined, activeIcon: Icons.volunteer_activism, label: 'التبرعات', route: 'donations', onTap: onNavigate),
           const SizedBox(height: 4),
           _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: 'تبرعاتي', route: 'myDonations', onTap: onNavigate),
+          if (isAdmin) ...[
+            const SizedBox(height: 4),
+            _NavItem(icon: Icons.admin_panel_settings_outlined, activeIcon: Icons.admin_panel_settings, label: 'إدارة التبرعات', route: 'adminDonations', onTap: onNavigate),
+          ],
           const SizedBox(height: 4),
           _NavItem(icon: Icons.groups_outlined, activeIcon: Icons.groups, label: 'المبادرات والمجموعات', route: 'initiatives', onTap: onNavigate),
           const SizedBox(height: 4),

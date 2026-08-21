@@ -9,6 +9,7 @@ import '../features/news/services/news_service.dart';
 import 'api_client.dart';
 import 'biometric_service.dart';
 import 'config/app_config_service.dart';
+import 'fcm_service.dart';
 import 'local_mute_service.dart';
 import 'socket_service.dart';
 
@@ -69,6 +70,10 @@ final localMuteServiceProvider = Provider<LocalMuteService>((ref) {
 final localMutedGroupsProvider =
     StateNotifierProvider<LocalMuteNotifier, Set<String>>((ref) {
   return LocalMuteNotifier(ref.read(localMuteServiceProvider));
+});
+
+final fcmServiceProvider = Provider<FcmService>((ref) {
+  return FcmService(ref.read(apiClientProvider));
 });
 
 class LocalMuteNotifier extends StateNotifier<Set<String>> {

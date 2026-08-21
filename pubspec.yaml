@@ -28,6 +28,9 @@ dependencies:
   flutter_stripe: ^11.5.0
   local_auth: ^2.3.0
   flutter_quill: ^11.4.2
+  firebase_core: ^3.12.1
+  firebase_messaging: ^15.2.1
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:

@@ -532,7 +532,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ],
                           const SizedBox(height: 24),
                           GestureDetector(
-                            onTap: () => context.pushNamed('activationOtp', extra: _normalizedPhone),
+                            onTap: () => context.pushNamed('register'),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                               decoration: BoxDecoration(
@@ -548,12 +548,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       color: AppColors.primaryLight,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.lock_open, color: AppColors.primary, size: 20),
+                                    child: const Icon(Icons.person_add_alt_1, color: AppColors.primary, size: 20),
                                   ),
                                   const SizedBox(width: 12),
                                   const Expanded(
                                     child: Text(
-                                      'أول تسجيل دخول؟',
+                                      'ليس لديك حساب؟ قدّم طلب انضمام',
                                       style: TextStyle(
                                         fontFamily: 'IBMPlexSansArabic',
                                         fontSize: 14,
@@ -564,6 +564,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                                   const Icon(Icons.arrow_back_ios_new, color: AppColors.primary, size: 16),
                                 ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Center(
+                            child: GestureDetector(
+                              onTap: () => context.pushNamed('activationOtp', extra: _normalizedPhone),
+                              child: const Text(
+                                'أول تسجيل دخول؟',
+                                style: TextStyle(
+                                  fontFamily: 'IBMPlexSansArabic',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                           ),
