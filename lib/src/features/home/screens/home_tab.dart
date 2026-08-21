@@ -588,7 +588,7 @@ class _CampaignCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  'المستهدف: ${_toArabicDigits(fmt.format(campaign.targetAmount))} ر.س',
+                  'المستهدف: ${_toArabicDigits(fmt.format(campaign.targetAmount))} ج.س',
                   style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kSecondary),
                 ),
               ],

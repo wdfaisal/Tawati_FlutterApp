@@ -195,25 +195,21 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
   }
 
   Widget _buildLoading() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          skeletonBox(height: 240, borderRadius: 0, margin: EdgeInsets.zero),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Transform.translate(
-              offset: const Offset(0, -56),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              skeletonBox(height: 220, borderRadius: 0, margin: EdgeInsets.zero),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    skeletonLine(width: 180, height: 18, margin: EdgeInsets.zero),
+                    skeletonLine(width: 200, height: 20, margin: EdgeInsets.zero),
+                    const SizedBox(height: 6),
+                    skeletonLine(width: 120, height: 12, margin: EdgeInsets.zero),
                     const SizedBox(height: 20),
                     Row(
                       children: [
@@ -222,44 +218,104 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               skeletonLine(width: 60, height: 12, margin: EdgeInsets.zero),
-                              const SizedBox(height: 8),
-                              skeletonLine(width: 120, height: 22, margin: EdgeInsets.zero),
+                              const SizedBox(height: 6),
+                              skeletonLine(width: 100, height: 24, margin: EdgeInsets.zero),
                             ],
                           ),
                         ),
+                        Container(width: 1, height: 40, color: _kBorder),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               skeletonLine(width: 80, height: 12, margin: EdgeInsets.zero),
-                              const SizedBox(height: 8),
-                              skeletonLine(width: 120, height: 20, margin: EdgeInsets.zero),
+                              const SizedBox(height: 6),
+                              skeletonLine(width: 100, height: 20, margin: EdgeInsets.zero),
                             ],
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    skeletonLine(height: 12, borderRadius: 6, margin: EdgeInsets.zero),
-                    const SizedBox(height: 24),
+                    skeletonLine(height: 10, borderRadius: 5, margin: EdgeInsets.zero),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        skeletonCircle(size: 36),
-                        const SizedBox(width: 10),
-                        Expanded(child: skeletonLine(height: 12, margin: EdgeInsets.zero)),
-                        const SizedBox(width: 16),
-                        skeletonCircle(size: 36),
-                        const SizedBox(width: 10),
-                        Expanded(child: skeletonLine(height: 12, margin: EdgeInsets.zero)),
+                        skeletonLine(width: 100, height: 12, margin: EdgeInsets.zero),
+                        const Spacer(),
+                        skeletonLine(width: 60, height: 12, margin: EdgeInsets.zero),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _kSurface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          skeletonCircle(size: 36),
+                          const SizedBox(width: 10),
+                          Expanded(child: skeletonLine(height: 12, margin: EdgeInsets.zero)),
+                          const SizedBox(width: 16),
+                          skeletonCircle(size: 36),
+                          const SizedBox(width: 10),
+                          Expanded(child: skeletonLine(height: 12, margin: EdgeInsets.zero)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Container(width: 6, height: 24, decoration: BoxDecoration(color: _kSurface, borderRadius: BorderRadius.circular(999))),
+                        const SizedBox(width: 8),
+                        skeletonLine(width: 100, height: 16, margin: EdgeInsets.zero),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    skeletonLine(height: 12, margin: EdgeInsets.zero),
+                    const SizedBox(height: 8),
+                    skeletonLine(height: 12, margin: EdgeInsets.zero),
+                    const SizedBox(height: 8),
+                    skeletonLine(width: 200, height: 12, margin: EdgeInsets.zero),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        skeletonBox(width: 70, height: 36, borderRadius: 10),
+                        const SizedBox(width: 8),
+                        skeletonBox(width: 70, height: 36, borderRadius: 10),
+                        const SizedBox(width: 8),
+                        skeletonBox(width: 70, height: 36, borderRadius: 10),
+                        const SizedBox(width: 8),
+                        skeletonBox(width: 70, height: 36, borderRadius: 10),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Container(width: 6, height: 24, decoration: BoxDecoration(color: _kSurface, borderRadius: BorderRadius.circular(999))),
+                        const SizedBox(width: 8),
+                        skeletonLine(width: 120, height: 16, margin: EdgeInsets.zero),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    skeletonCard(margin: EdgeInsets.zero),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: _buildHeaderBar(),
+        ),
+      ],
     );
   }
 

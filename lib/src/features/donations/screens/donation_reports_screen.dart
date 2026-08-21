@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../services/admin_donation_service.dart';
@@ -74,79 +80,203 @@ class _DonationReportsScreenState extends ConsumerState<DonationReportsScreen> {
   Future<void> _exportReport() async {
     if (_report == null) return;
     setState(() => _exporting = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (mounted) {
-      _showPrintPreview();
-      setState(() => _exporting = false);
+    try {
+      final pdf = await _generatePdf();
+      if (!mounted) return;
+      await showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => _ExportActionSheet(
+          onPrint: () async {
+            Navigator.pop(ctx);
+            await Printing.layoutPdf(
+              onLayout: (format) async => pdf.save(),
+              name: 'تقرير_التبرعات_${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
+            );
+          },
+          onDownload: () async {
+            Navigator.pop(ctx);
+            await _savePdfToFile(pdf);
+          },
+          onShare: () async {
+            Navigator.pop(ctx);
+            await _sharePdf(pdf);
+          },
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل إنشاء التقرير: $e', style: const TextStyle(fontFamily: 'IBMPlexSansArabic'))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
     }
   }
 
-  void _showPrintPreview() {
+  Future<pw.Document> _generatePdf() async {
+    final pdf = pw.Document();
+    final fmt = NumberFormat('#,##0');
     final totals = _report!['totals'] as Map<String, dynamic>? ?? {'total': 0, 'count': 0};
     final byCampaign = (_report!['byCampaign'] as List<dynamic>?) ?? [];
     final byMethod = (_report!['byMethod'] as List<dynamic>?) ?? [];
-    final fmt = NumberFormat('#,##0');
     final dateRange = _dateRangeLabel();
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (ctx, ctrl) => Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  const Icon(Icons.print_rounded, color: AppColors.primary, size: 22),
-                  const SizedBox(width: 8),
-                  const Expanded(child: Text('معاينة التقرير', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.primary))),
-                  IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, color: Color(0xFF64748B))),
-                ],
+    final regularData = await rootBundle.load('assets/fonts/IBMPlexSansArabic-Regular.ttf');
+    final boldData = await rootBundle.load('assets/fonts/IBMPlexSansArabic-Bold.ttf');
+    final arabicFont = pw.Font.ttf(regularData);
+    final arabicBold = pw.Font.ttf(boldData);
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        textDirection: pw.TextDirection.rtl,
+        build: (context) => [
+          pw.SizedBox(height: 20),
+          pw.Center(
+            child: pw.Text('تواتي', style: pw.TextStyle(font: arabicBold, fontSize: 24, color: PdfColor.fromHex('#044465'))),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Center(
+            child: pw.Text('تقرير التبرعات المالية', style: pw.TextStyle(font: arabicFont, fontSize: 14, color: PdfColor.fromHex('#62707B'))),
+          ),
+          pw.SizedBox(height: 8),
+          pw.Center(
+            child: pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: pw.BoxDecoration(
+                color: PdfColor(4, 68, 101, 26),
+                borderRadius: pw.BorderRadius.circular(6),
               ),
+              child: pw.Text(dateRange, style: pw.TextStyle(font: arabicBold, fontSize: 11, color: PdfColor.fromHex('#044465'))),
             ),
-            Expanded(
-              child: ListView(
-                controller: ctrl,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                children: [
-                  _reportHeader(dateRange),
-                  const SizedBox(height: 20),
-                  _reportSummaryCard(fmt, totals),
-                  const SizedBox(height: 20),
-                  if (byCampaign.isNotEmpty) ...[
-                    _reportSectionTitle('التبرعات حسب الحملة'),
-                    const SizedBox(height: 10),
-                    ...byCampaign.map((item) => _reportCampaignRow(item, fmt)),
-                    const SizedBox(height: 20),
-                  ],
-                  if (byMethod.isNotEmpty) ...[
-                    _reportSectionTitle('التبرعات حسب طريقة الدفع'),
-                    const SizedBox(height: 10),
-                    ...byMethod.map((item) => _reportMethodRow(item, fmt)),
-                    const SizedBox(height: 20),
-                  ],
-                  _reportFooter(),
-                  const SizedBox(height: 32),
-                ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Center(
+            child: pw.Text(
+              'تم إعداد التقرير في: ${DateFormat('d/MM/yyyy  HH:mm').format(DateTime.now())}',
+              style: pw.TextStyle(font: arabicFont, fontSize: 10, color: PdfColor.fromHex('#94A3B8')),
+            ),
+          ),
+          pw.SizedBox(height: 20),
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(16),
+            decoration: pw.BoxDecoration(
+              gradient: pw.LinearGradient(
+                colors: [PdfColor.fromHex('#044465'), PdfColor.fromHex('#033A57')],
               ),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('الملخص العام', style: pw.TextStyle(font: arabicBold, fontSize: 14, color: PdfColors.white)),
+                pw.SizedBox(height: 12),
+                pw.Row(
+                  children: [
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('إجمالي المبالغ', style: pw.TextStyle(font: arabicFont, fontSize: 10, color: PdfColor(255, 255, 255, 191))),
+                          pw.SizedBox(height: 4),
+                          pw.Text('${fmt.format(totals['total'] ?? 0)} ج.س', style: pw.TextStyle(font: arabicBold, fontSize: 16, color: PdfColors.white)),
+                        ],
+                      ),
+                    ),
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('عدد التبرعات', style: pw.TextStyle(font: arabicFont, fontSize: 10, color: PdfColor(255, 255, 255, 191))),
+                          pw.SizedBox(height: 4),
+                          pw.Text('${totals['count'] ?? 0}', style: pw.TextStyle(font: arabicBold, fontSize: 16, color: PdfColors.white)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (byCampaign.isNotEmpty) ...[
+            pw.SizedBox(height: 20),
+            pw.Text('التبرعات حسب الحملة', style: pw.TextStyle(font: arabicBold, fontSize: 13, color: PdfColor.fromHex('#044465'))),
+            pw.SizedBox(height: 8),
+            pw.TableHelper.fromTextArray(
+              context: context,
+              headerStyle: pw.TextStyle(font: arabicBold, fontSize: 10, color: PdfColors.white),
+              headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#044465')),
+              cellStyle: pw.TextStyle(font: arabicFont, fontSize: 10),
+              cellAlignment: pw.Alignment.centerRight,
+              headerAlignment: pw.Alignment.centerRight,
+              cellHeight: 30,
+              cellAlignments: {0: pw.Alignment.centerRight, 1: pw.Alignment.center, 2: pw.Alignment.centerLeft},
+              headerAlignments: {0: pw.Alignment.centerRight, 1: pw.Alignment.center, 2: pw.Alignment.centerLeft},
+              headers: ['الحملة', 'عدد التبرعات', 'المبلغ'],
+              data: byCampaign.map((item) {
+                final cid = item['_id'];
+                final title = cid is Map ? cid['title'] ?? 'حملة' : 'حملة';
+                return [title, '${item['count']}', '${fmt.format(item['total'] ?? 0)} ج.س'];
+              }).toList(),
             ),
           ],
-        ),
+          if (byMethod.isNotEmpty) ...[
+            pw.SizedBox(height: 20),
+            pw.Text('التبرعات حسب طريقة الدفع', style: pw.TextStyle(font: arabicBold, fontSize: 13, color: PdfColor.fromHex('#044465'))),
+            pw.SizedBox(height: 8),
+            pw.TableHelper.fromTextArray(
+              context: context,
+              headerStyle: pw.TextStyle(font: arabicBold, fontSize: 10, color: PdfColors.white),
+              headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#044465')),
+              cellStyle: pw.TextStyle(font: arabicFont, fontSize: 10),
+              cellAlignment: pw.Alignment.centerRight,
+              headerAlignment: pw.Alignment.centerRight,
+              cellHeight: 30,
+              cellAlignments: {0: pw.Alignment.centerRight, 1: pw.Alignment.center, 2: pw.Alignment.centerLeft},
+              headerAlignments: {0: pw.Alignment.centerRight, 1: pw.Alignment.center, 2: pw.Alignment.centerLeft},
+              headers: ['طريقة الدفع', 'عدد التبرعات', 'المبلغ'],
+              data: byMethod.map((item) {
+                final pm = item['_id'];
+                final name = pm is Map ? pm['display_name_ar'] ?? pm['provider_key'] ?? 'طريقة' : 'طريقة';
+                return [name, '${item['count']}', '${fmt.format(item['total'] ?? 0)} ج.س'];
+              }).toList(),
+            ),
+          ],
+          pw.SizedBox(height: 30),
+          pw.Center(
+            child: pw.Text(
+              'هذا التقرير تم إعداده تلقائياً عبر منصة تواتي. جميع المبالغ مؤكدة ومصرح بها.',
+              style: pw.TextStyle(font: arabicFont, fontSize: 9, color: PdfColor.fromHex('#94A3B8')),
+            ),
+          ),
+        ],
       ),
     );
+    return pdf;
+  }
+
+  Future<void> _savePdfToFile(pw.Document pdf) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/تقرير_التبرعات_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.pdf');
+    await file.writeAsBytes(await pdf.save());
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تم حفظ التقرير في: ${file.path}', style: const TextStyle(fontFamily: 'IBMPlexSansArabic')),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _sharePdf(pw.Document pdf) async {
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/تقرير_التبرعات_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.pdf');
+    await file.writeAsBytes(await pdf.save());
+    await Printing.sharePdf(bytes: await pdf.save(), filename: 'تقرير_التبرعات.pdf');
   }
 
   String _dateRangeLabel() {
@@ -396,140 +526,99 @@ class _DonationReportsScreenState extends ConsumerState<DonationReportsScreen> {
       ),
     );
   }
+}
 
-  Widget _reportHeader(String dateRange) {
+class _ExportActionSheet extends StatelessWidget {
+  final VoidCallback onPrint;
+  final VoidCallback onDownload;
+  final VoidCallback onShare;
+
+  const _ExportActionSheet({
+    required this.onPrint,
+    required this.onDownload,
+    required this.onShare,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Column(
-        children: [
-          SizedBox(
-            width: 80,
-            height: 80,
-            child: Image.asset('assets/images/splash_logo.png', fit: BoxFit.contain),
-          ),
-          const SizedBox(height: 10),
-          const Text('تواتي', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.primary)),
-          const SizedBox(height: 4),
-          const Text('تقرير التبرعات المالية', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: Color(0xFF62707B))),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-            child: Text(dateRange, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
-          ),
-          const SizedBox(height: 8),
-          Text('تم إعداد التقرير في: ${DateFormat('d/MM/yyyy  HH:mm', 'ar').format(DateTime.now())}', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: Color(0xFF94A3B8))),
-        ],
-      ),
-    );
-  }
-
-  Widget _reportSummaryCard(NumberFormat fmt, Map<String, dynamic> totals) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [AppColors.primary, Color(0xFF033A57)]),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('الملخص العام', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _reportMiniStat('إجمالي المبالغ', '${fmt.format(totals['total'] ?? 0)} ج.س'),
-              const SizedBox(width: 16),
-              _reportMiniStat('عدد التبرعات', '${totals['count'] ?? 0}'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _reportMiniStat(String label, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+      child: SafeArea(
+        top: false,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(label, style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: Colors.white.withValues(alpha: 0.75))),
-            const SizedBox(height: 4),
-            Text(value, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 16),
+            const Text('تصدير التقرير', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.primary)),
+            const SizedBox(height: 8),
+            const Text('اختر طريقة التصدير', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: Color(0xFF94A3B8))),
+            const SizedBox(height: 16),
+            _actionTile(
+              icon: Icons.print_rounded,
+              title: 'طباعة',
+              subtitle: 'إرسال التقرير للطابعة',
+              onTap: onPrint,
+            ),
+            _actionTile(
+              icon: Icons.download_rounded,
+              title: 'حفظ كملف PDF',
+              subtitle: 'حفظ التقرير على الجهاز',
+              onTap: onDownload,
+            ),
+            _actionTile(
+              icon: Icons.share_rounded,
+              title: 'مشاركة',
+              subtitle: 'إرسال التقرير عبر تطبيقات أخرى',
+              onTap: onShare,
+              isLast: true,
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
     );
   }
 
-  Widget _reportSectionTitle(String title) {
-    return Text(title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary));
-  }
-
-  Widget _reportCampaignRow(dynamic item, NumberFormat fmt) {
-    final cid = item['_id'];
-    final title = cid is Map ? cid['title'] ?? 'حملة' : 'حملة';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10)),
-      child: Row(
-        children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
-            const SizedBox(height: 2),
-            Text('${item['count']} تبرع', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: Color(0xFF94A3B8))),
-          ])),
-          Text('${fmt.format(item['total'] ?? 0)} ج.س', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
-        ],
-      ),
-    );
-  }
-
-  Widget _reportMethodRow(dynamic item, NumberFormat fmt) {
-    final pm = item['_id'];
-    final name = pm is Map ? pm['display_name_ar'] ?? pm['provider_key'] ?? 'طريقة' : 'طريقة';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10)),
-      child: Row(
-        children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
-            const SizedBox(height: 2),
-            Text('${item['count']} تبرع', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: Color(0xFF94A3B8))),
-          ])),
-          Text('${fmt.format(item['total'] ?? 0)} ج.س', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
-        ],
-      ),
-    );
-  }
-
-  Widget _reportFooter() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: const Text(
-        'هذا التقرير تم إعداده تلقائياً عبر منصة تواتي. جميع المبالغ مؤكدة ومصرح بها.',
-        textAlign: TextAlign.center,
-        style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: Color(0xFF94A3B8), height: 1.5),
-      ),
+  Widget _actionTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool isLast = false,
+  }) {
+    return Column(
+      children: [
+        ListTile(
+          onTap: onTap,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+          leading: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 22),
+          ),
+          title: Text(title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+          subtitle: Text(subtitle, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Color(0xFF94A3B8))),
+          trailing: const Icon(Icons.arrow_back_ios_rounded, size: 16, color: Color(0xFFCBD5E1)),
+        ),
+        if (!isLast)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: Divider(height: 1, color: Color(0xFFF1F5F8)),
+          ),
+      ],
     );
   }
 }
