@@ -146,7 +146,7 @@ class _DonationReportsScreenState extends ConsumerState<DonationReportsScreen> {
             child: pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: pw.BoxDecoration(
-                color: PdfColor(4, 68, 101, 26),
+                color: PdfColor(0.016, 0.267, 0.396, 0.1),
                 borderRadius: pw.BorderRadius.circular(6),
               ),
               child: pw.Text(dateRange, style: pw.TextStyle(font: arabicBold, fontSize: 11, color: PdfColor.fromHex('#044465'))),
@@ -180,7 +180,7 @@ class _DonationReportsScreenState extends ConsumerState<DonationReportsScreen> {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('إجمالي المبالغ', style: pw.TextStyle(font: arabicFont, fontSize: 10, color: PdfColor(255, 255, 255, 191))),
+                          pw.Text('إجمالي المبالغ', style: pw.TextStyle(font: arabicFont, fontSize: 10, color: PdfColor(1, 1, 1, 0.75))),
                           pw.SizedBox(height: 4),
                           pw.Text('${fmt.format(totals['total'] ?? 0)} ج.س', style: pw.TextStyle(font: arabicBold, fontSize: 16, color: PdfColors.white)),
                         ],
@@ -190,7 +190,7 @@ class _DonationReportsScreenState extends ConsumerState<DonationReportsScreen> {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('عدد التبرعات', style: pw.TextStyle(font: arabicFont, fontSize: 10, color: PdfColor(255, 255, 255, 191))),
+                          pw.Text('عدد التبرعات', style: pw.TextStyle(font: arabicFont, fontSize: 10, color: PdfColor(1, 1, 1, 0.75))),
                           pw.SizedBox(height: 4),
                           pw.Text('${totals['count'] ?? 0}', style: pw.TextStyle(font: arabicBold, fontSize: 16, color: PdfColors.white)),
                         ],
