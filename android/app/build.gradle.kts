@@ -46,7 +46,7 @@ kotlin {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugaring_lib:2.1.4")
+    coreLibraryDesugaring("com.android.tools:desugaring_lib:2.0.4")
 }
 
 flutter {
