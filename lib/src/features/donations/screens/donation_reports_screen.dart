@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
-import '../../../core/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../services/admin_donation_service.dart';
 
-class DonationReportsScreen extends StatefulWidget {
+class DonationReportsScreen extends ConsumerStatefulWidget {
   const DonationReportsScreen({super.key});
 
   @override
-  State<DonationReportsScreen> createState() => _DonationReportsScreenState();
+  ConsumerState<DonationReportsScreen> createState() => _DonationReportsScreenState();
 }
 
-class _DonationReportsScreenState extends State<DonationReportsScreen> {
-  late final AdminDonationService _service;
-
+class _DonationReportsScreenState extends ConsumerState<DonationReportsScreen> {
   DateTime? _fromDate;
   DateTime? _toDate;
   Map<String, dynamic>? _report;
@@ -25,16 +23,14 @@ class _DonationReportsScreenState extends State<DonationReportsScreen> {
   @override
   void initState() {
     super.initState();
-    _service = AdminDonationService(
-      ApiClient(baseUrl: const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://54.251.69.36/api/v1')),
-    );
     _loadReport();
   }
 
   Future<void> _loadReport() async {
     setState(() => _loading = true);
     try {
-      final data = await _service.getDonationReports(from: _fromDate, to: _toDate);
+      final service = ref.read(adminDonationServiceProvider);
+      final data = await service.getDonationReports(from: _fromDate, to: _toDate);
       if (!mounted) return;
       setState(() {
         _report = data;

@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
-import '../../../core/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/donation.dart';
 import '../services/admin_donation_service.dart';
 
-class AdminDonationsScreen extends StatefulWidget {
+class AdminDonationsScreen extends ConsumerStatefulWidget {
   const AdminDonationsScreen({super.key});
 
   @override
-  State<AdminDonationsScreen> createState() => _AdminDonationsScreenState();
+  ConsumerState<AdminDonationsScreen> createState() => _AdminDonationsScreenState();
 }
 
-class _AdminDonationsScreenState extends State<AdminDonationsScreen> {
-  final _service = AdminDonationService(
-    ApiClient(baseUrl: const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://54.251.69.36/api/v1')),
-  );
+class _AdminDonationsScreenState extends ConsumerState<AdminDonationsScreen> {
   final _searchCtrl = TextEditingController();
 
   List<Map<String, dynamic>> _allDonations = [];
@@ -42,9 +39,10 @@ class _AdminDonationsScreenState extends State<AdminDonationsScreen> {
   Future<void> _loadData() async {
     setState(() => _loading = true);
     try {
+      final service = ref.read(adminDonationServiceProvider);
       final results = await Future.wait([
-        _service.getAdminDonations(limit: 200),
-        _service.getAdminCampaigns(),
+        service.getAdminDonations(limit: 200),
+        service.getAdminCampaigns(),
       ]);
       if (!mounted) return;
       setState(() {

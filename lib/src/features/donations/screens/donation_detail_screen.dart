@@ -1,30 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
-import '../../../core/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../services/admin_donation_service.dart';
 
-class DonationDetailScreen extends StatefulWidget {
+class DonationDetailScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> donation;
   const DonationDetailScreen({super.key, required this.donation});
 
   @override
-  State<DonationDetailScreen> createState() => _DonationDetailScreenState();
+  ConsumerState<DonationDetailScreen> createState() => _DonationDetailScreenState();
 }
 
-class _DonationDetailScreenState extends State<DonationDetailScreen> {
-  late final AdminDonationService _service;
+class _DonationDetailScreenState extends ConsumerState<DonationDetailScreen> {
   bool _actionLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _service = AdminDonationService(
-      ApiClient(baseUrl: const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://54.251.69.36/api/v1')),
-    );
-  }
 
   Map<String, dynamic> get _d => widget.donation;
 
@@ -84,7 +75,7 @@ class _DonationDetailScreenState extends State<DonationDetailScreen> {
     if (confirmed != true || !mounted) return;
     setState(() => _actionLoading = true);
     try {
-      await _service.approveDonation(_d['_id']);
+      await ref.read(adminDonationServiceProvider).approveDonation(_d['_id']);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم تأكيد التبرع بنجاح', style: TextStyle(fontFamily: 'IBMPlexSansArabic')), backgroundColor: Color(0xFF22C55E)),
@@ -119,7 +110,7 @@ class _DonationDetailScreenState extends State<DonationDetailScreen> {
     if (confirmed != true || !mounted) return;
     setState(() => _actionLoading = true);
     try {
-      await _service.rejectDonation(_d['_id'], notes: notesCtrl.text.isEmpty ? null : notesCtrl.text);
+      await ref.read(adminDonationServiceProvider).rejectDonation(_d['_id'], notes: notesCtrl.text.isEmpty ? null : notesCtrl.text);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم رفض التبرع', style: TextStyle(fontFamily: 'IBMPlexSansArabic')), backgroundColor: Color(0xFFF59E0B)),
