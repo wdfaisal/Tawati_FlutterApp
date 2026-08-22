@@ -26,8 +26,12 @@ void main() async {
     ),
   );
   if (!kIsWeb) {
-    await Firebase.initializeApp();
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    try {
+      await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (_) {
+      // Firebase not configured (e.g. missing GoogleService-Info.plist on iOS)
+    }
     final envKey = const String.fromEnvironment(
       'STRIPE_PUBLISHABLE_KEY',
       defaultValue: '',

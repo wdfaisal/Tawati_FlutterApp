@@ -10,7 +10,7 @@ import 'api_client.dart';
 class FcmService {
   final ApiClient _api;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging? _messaging;
   bool _initialized = false;
 
   static const _channel = AndroidNotificationChannel(
@@ -26,7 +26,14 @@ class FcmService {
     if (_initialized || kIsWeb) return;
     _initialized = true;
 
-    final settings = await _messaging.requestPermission(
+    try {
+      _messaging = FirebaseMessaging.instance;
+    } catch (_) {
+      return;
+    }
+    if (_messaging == null) return;
+
+    final settings = await _messaging!.requestPermission(
       alert: true,
       badge: true,
       sound: true,
@@ -52,17 +59,17 @@ class FcmService {
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
     FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationOpen);
 
-    final initialMessage = await _messaging.getInitialMessage();
+    final initialMessage = await _messaging!.getInitialMessage();
     if (initialMessage != null) {
       _handleNotificationOpen(initialMessage);
     }
 
-    final token = await _messaging.getToken();
+    final token = await _messaging!.getToken();
     if (token != null) {
       await _sendTokenToBackend(token);
     }
 
-    _messaging.onTokenRefresh.listen(_sendTokenToBackend);
+    _messaging!.onTokenRefresh.listen(_sendTokenToBackend);
   }
 
   Future<void> _sendTokenToBackend(String token) async {
