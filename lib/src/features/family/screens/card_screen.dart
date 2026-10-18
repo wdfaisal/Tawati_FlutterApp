@@ -96,6 +96,7 @@ class CardScreen extends ConsumerWidget {
                 memberNumber: user.memberNumber ?? '—',
                 joinedAt: joinedAtStr,
                 membershipLevel: user.membershipLabel,
+                verified: user.documentationCompleted,
               ),
               child: Hero(
                 tag: 'digital-card',
@@ -104,6 +105,7 @@ class CardScreen extends ConsumerWidget {
                   memberNumber: user.memberNumber ?? '—',
                   joinedAt: joinedAtStr,
                   membershipLevel: user.membershipLabel,
+                  verified: user.documentationCompleted,
                 ),
               ),
             ),
@@ -146,6 +148,7 @@ class CardScreen extends ConsumerWidget {
     required String memberNumber,
     required String joinedAt,
     required String membershipLevel,
+    required bool verified,
   }) {
     showGeneralDialog<void>(
       context: context,
@@ -197,6 +200,7 @@ class CardScreen extends ConsumerWidget {
                               memberNumber: memberNumber,
                               joinedAt: joinedAt,
                               membershipLevel: membershipLevel,
+                              verified: verified,
                             ),
                           ),
                         ),
@@ -428,12 +432,14 @@ class _DigitalCard extends StatelessWidget {
   final String memberNumber;
   final String joinedAt;
   final String membershipLevel;
+  final bool verified;
 
   const _DigitalCard({
     required this.fullName,
     required this.memberNumber,
     required this.joinedAt,
     required this.membershipLevel,
+    this.verified = false,
   });
 
   @override
@@ -580,22 +586,23 @@ class _DigitalCard extends StatelessWidget {
                             ],
                           ),
                           const Spacer(),
-                          Container(
-                            width: 74,
-                            height: 74,
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.15),
+                          if (verified)
+                            Container(
+                              width: 74,
+                              height: 74,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(alpha: 0.15),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.verified_user,
+                                size: 38,
+                                color: AppColors.primary,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.verified_user,
-                              size: 38,
-                              color: AppColors.primary,
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -611,22 +618,23 @@ class _DigitalCard extends StatelessWidget {
                             ),
                           ),
                           const Spacer(),
-                          const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.verified, color: AppColors.primary, size: 16),
-                              SizedBox(width: 4),
-                              Text(
-                                'موثق',
-                                style: TextStyle(
-                                  fontFamily: 'IBMPlexSansArabic',
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.primary,
+                          if (verified)
+                            const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified, color: AppColors.primary, size: 16),
+                                SizedBox(width: 4),
+                                Text(
+                                  'موثق',
+                                  style: TextStyle(
+                                    fontFamily: 'IBMPlexSansArabic',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
                         ],
                       ),
                     ],

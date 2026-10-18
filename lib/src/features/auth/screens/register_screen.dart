@@ -49,6 +49,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _pageController = PageController();
   int _currentStep = 0;
   bool _isLoading = false;
+  bool _checkingPhone = false;
   bool _isJoinFlow = false;
 
   final _picker = ImagePicker();
@@ -270,11 +271,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
-  void _next() {
+  Future<void> _next() async {
     if (!_validateCurrentStep()) return;
+    if (_currentStep == 0 && !await _checkPhoneNotRegistered()) return;
     if (_currentStep < _totalSteps - 1) {
       _scheduleDraftSave();
       _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+    }
+  }
+
+  Future<bool> _checkPhoneNotRegistered() async {
+    setState(() => _checkingPhone = true);
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.post('/registration-requests/check-phone', data: {
+        'phone': normalizePhone(_phoneCtrl.text),
+      });
+      final data = res.data is Map ? res.data['data'] : null;
+      if (data is Map && data['registered'] == true) {
+        _showError('رقم الجوال هذا مسجَّل مسبقاً، سجّل الدخول أو استخدم رقماً آخر');
+        return false;
+      }
+      return true;
+    } catch (_) {
+      return true;
+    } finally {
+      if (mounted) setState(() => _checkingPhone = false);
     }
   }
 
@@ -414,7 +436,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.surface,
+        backgroundColor: Colors.white,
         appBar: AppBar(
           title: Text(
             _isJoinFlow ? 'انضمام لعائلة' : 'طلب انضمام',
@@ -1529,7 +1551,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : (isLast ? (_isJoinFlow ? _submitJoinFamily : _submitNewFamily) : _next),
+                onPressed: (_isLoading || _checkingPhone) ? null : (isLast ? (_isJoinFlow ? _submitJoinFamily : _submitNewFamily) : _next),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -1538,7 +1560,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   shadowColor: AppColors.primary.withValues(alpha: 0.28),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: _isLoading
+                child: (_isLoading || _checkingPhone)
                     ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                     : Text(label, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.w700)),
               ),
@@ -1546,7 +1568,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             if (_currentStep > 0) ...[
               const SizedBox(height: 4),
               TextButton(
-                onPressed: _isLoading ? null : _prev,
+                onPressed: (_isLoading || _checkingPhone) ? null : _prev,
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.textSecondary,
                   textStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w500),

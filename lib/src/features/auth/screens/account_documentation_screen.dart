@@ -192,11 +192,17 @@ class _AccountDocumentationScreenState extends ConsumerState<AccountDocumentatio
     final user = ref.watch(authProvider).user;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.card,
+        backgroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0.5,
         automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppColors.textPrimary),
+          tooltip: 'رجوع',
+          onPressed: () => context.canPop() ? context.pop() : context.goNamed('home'),
+        ),
         title: const Text('توثيق الحساب', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
         centerTitle: true,
       ),
