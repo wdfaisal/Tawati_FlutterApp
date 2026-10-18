@@ -87,8 +87,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
 
     ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.isAuthenticated) {
-        final needsDocumentation = next.user != null && !next.user!.documentationCompleted;
-        context.goNamed(needsDocumentation ? 'accountDocumentation' : 'home');
+        context.goNamed('home');
       } else if (next.error != null && next.error != prev?.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

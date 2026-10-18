@@ -68,6 +68,7 @@ class HomeTab extends ConsumerWidget {
                 unreadCount: unreadCount,
               ),
               const _Greeting(),
+              const _DocumentationBanner(),
               _QuickActionsRow(
                 onAddAnnouncement: () => context.push('/add-announcement'),
                 onAddDeath: () => context.push('/add-obituary'),
@@ -351,8 +352,99 @@ class _Greeting extends ConsumerWidget {
   }
 }
 
-class _QuickActionsRow extends StatelessWidget {
-  final VoidCallback onAddAnnouncement;
+class _DocumentationBanner extends ConsumerStatefulWidget {
+  const _DocumentationBanner();
+
+  @override
+  ConsumerState<_DocumentationBanner> createState() => _DocumentationBannerState();
+}
+
+class _DocumentationBannerState extends ConsumerState<_DocumentationBanner> {
+  bool _dismissed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).user;
+    if (user == null || user.documentationCompleted || _dismissed) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, Color(0xFF0F766E)],
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 16, offset: const Offset(0, 6)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(14)),
+                  child: const Icon(Icons.verified_user_outlined, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('حسابك غير موثّق', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                      SizedBox(height: 3),
+                      Text('أكمل استبيان التوثيق لتوثيق حسابك والانضمام لشجرة العائلة.',
+                          style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Colors.white70, height: 1.5)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 40,
+                    child: ElevatedButton(
+                      onPressed: () => context.pushNamed('accountDocumentation'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('إكمال التوثيق الآن', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () => setState(() => _dismissed = true),
+                  behavior: HitTestBehavior.opaque,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Text('لاحقاً', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionsRow extends StatelessWidget {  final VoidCallback onAddAnnouncement;
   final VoidCallback onAddDeath;
   final VoidCallback onOpenChats;
   final VoidCallback onDonate;

@@ -40,8 +40,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     final authState = ref.read(authProvider);
     if (authState.isAuthenticated) {
-      final needsDocumentation = authState.user != null && !authState.user!.documentationCompleted;
-      context.goNamed(needsDocumentation ? 'accountDocumentation' : 'home');
+      context.goNamed('home');
     } else {
       context.goNamed('onboarding');
     }
