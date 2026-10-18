@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tawati_mobile/src/features/auth/screens/onboarding_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/login_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/first_login_screen.dart';
+import 'package:tawati_mobile/src/features/auth/screens/account_documentation_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/family_setup_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/register_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/pending_review_screen.dart';
@@ -99,6 +100,11 @@ final appRouter = GoRouter(
       path: '/first-login',
       name: 'firstLogin',
       builder: (c, s) => const FirstLoginScreen(),
+    ),
+    GoRoute(
+      path: '/account-documentation',
+      name: 'accountDocumentation',
+      builder: (c, s) => const AccountDocumentationScreen(),
     ),
     GoRoute(
       path: '/family-setup',

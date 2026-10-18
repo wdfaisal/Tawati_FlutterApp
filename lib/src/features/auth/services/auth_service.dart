@@ -90,6 +90,22 @@ class AuthService {
     return User.fromJson(response.data['data']);
   }
 
+  Future<void> submitDocumentation({
+    String? nationalId,
+    String? dateOfBirth,
+    String? maritalStatus,
+    String? spouseName,
+    List<Map<String, dynamic>> children = const [],
+  }) async {
+    await _api.put('/users/me/documentation', data: {
+      'nationalId': nationalId,
+      'dateOfBirth': dateOfBirth,
+      'maritalStatus': maritalStatus,
+      'spouseName': spouseName,
+      'children': children,
+    });
+  }
+
   Future<void> logout({String? refreshToken}) async {
     if (refreshToken != null && refreshToken.isNotEmpty) {
       try {

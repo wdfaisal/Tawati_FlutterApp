@@ -192,7 +192,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
-        context.goNamed('home');
+        final needsDocumentation = next.user != null && !next.user!.documentationCompleted;
+        context.goNamed(needsDocumentation ? 'accountDocumentation' : 'home');
       } else if (next.error != null && next.error != prev?.error) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(next.error!, style: const TextStyle(fontFamily: 'IBMPlexSansArabic')),

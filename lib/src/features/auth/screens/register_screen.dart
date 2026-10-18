@@ -64,6 +64,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   String? _nameError;
   String? _phoneError;
+  final _emailCtrl = TextEditingController();
+  String? _emailError;
 
   String _maritalStatus = 'single';
   final _spouseNameCtrl = TextEditingController();
@@ -92,13 +94,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool get _passwordValid => _hasMin8Chars && _hasLetters && _hasNumbers && _passwordsMatch;
   bool get _joinPasswordValid => _hasMin8Chars && _hasLetters && _hasNumbers;
 
-  int get _totalSteps => _isJoinFlow ? 3 : (_surveyTemplate != null ? 6 : 5);
+  int get _totalSteps => _isJoinFlow ? 3 : 2;
 
   List<String> get _stepLabels {
     if (_isJoinFlow) return ['بياناتك', 'ربّ أسرتك', 'مراجعة وإرسال'];
-    final labels = ['بياناتك', 'حالتك العائلية', 'أبناؤك', 'حماية حسابك', 'مراجعة وإرسال'];
-    if (_surveyTemplate != null) labels.insert(3, 'الاستبيان');
-    return labels;
+    return ['بيانات الحساب', 'مراجعة وإرسال'];
   }
 
   ({IconData icon, String title, String caption}) _stepHeaderFor(int index) {
@@ -124,45 +124,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return switch (index) {
       0 => (
           icon: Icons.person_rounded,
-          title: 'مَن أنت؟',
-          caption: 'بياناتك تُربط رسميًا بشجرة عائلتك بعد الموافقة.',
+          title: 'إنشاء حساب رب الأسرة',
+          caption: 'سجّل بالاسم ورقم الجوال والبريد الإلكتروني وكلمة المرور.',
         ),
-      1 => (
-          icon: Icons.family_restroom_rounded,
-          title: 'حالتك العائلية',
-          caption: 'اختر حالتك، وستظهر الحقول المطلوبة تلقائيًا.',
-        ),
-      2 => (
-          icon: Icons.child_care_rounded,
-          title: 'أبناؤك',
-          caption: 'أضف أبناءك — كل ابن في بطاقة قابلة للطي.',
-        ),
-      3 => _surveyTemplate != null
-          ? (
-              icon: Icons.quiz_rounded,
-              title: 'الاستبيان',
-              caption: 'أجب على الأسئلة التالية.',
-            )
-          : (
-              icon: Icons.lock_rounded,
-              title: 'حماية حسابك',
-              caption: 'اختر كلمة مرور قوية لحماية حسابك.',
-            ),
-      4 => _surveyTemplate != null
-          ? (
-              icon: Icons.lock_rounded,
-              title: 'حماية حسابك',
-              caption: 'اختر كلمة مرور قوية لحماية حسابك.',
-            )
-          : (
-              icon: Icons.fact_check_rounded,
-              title: 'مراجعة وإرسال',
-              caption: 'تأكد من بياناتك ثم أرسل طلب انضمامك.',
-            ),
       _ => (
           icon: Icons.fact_check_rounded,
           title: 'مراجعة وإرسال',
-          caption: 'تأكد من بياناتك ثم أرسل طلب انضمامك.',
+          caption: 'راجع بياناتك وأرسل الطلب.',
         ),
     };
   }
@@ -208,26 +176,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Map<String, dynamic> _draftData() => {
         'fullName': _fullNameCtrl.text,
         'phone': _phoneCtrl.text,
+        'email': _emailCtrl.text,
         'familyHeadPhone': _familyHeadPhoneCtrl.text,
-        'nationalId': _nationalIdCtrl.text,
-        'gender': _gender,
-        'birth': _selectedDate?.toIso8601String(),
-        'maritalStatus': _maritalStatus,
-        'spouseName': _spouseNameCtrl.text,
-        'hasChildren': _hasChildren,
-        'childCount': _childCount,
-        'children': _children
-            .map((c) => {
-                  'fullName': c.fullName,
-                  'gender': c.gender,
-                  'age': c.age,
-                  'nationalId': c.nationalId,
-                })
-            .toList(),
         'password': _passwordCtrl.text,
         'confirmPassword': _confirmPasswordCtrl.text,
         'countryCode': _selectedCountry.code,
-        'profileImagePath': _profileImagePath,
       };
 
   void _scheduleDraftSave() {
@@ -254,34 +207,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       setState(() {
         _fullNameCtrl.text = data['fullName'] as String? ?? '';
         _phoneCtrl.text = data['phone'] as String? ?? '';
+        _emailCtrl.text = data['email'] as String? ?? '';
         _familyHeadPhoneCtrl.text = data['familyHeadPhone'] as String? ?? '';
-        _nationalIdCtrl.text = data['nationalId'] as String? ?? '';
-        _gender = data['gender'] as String? ?? 'male';
-        _maritalStatus = data['maritalStatus'] as String? ?? 'single';
-        _spouseNameCtrl.text = data['spouseName'] as String? ?? '';
-        _hasChildren = data['hasChildren'] as bool? ?? false;
-        _childCount = data['childCount'] as int? ?? 0;
         _passwordCtrl.text = data['password'] as String? ?? '';
         _confirmPasswordCtrl.text = data['confirmPassword'] as String? ?? '';
-        _profileImagePath = data['profileImagePath'] as String?;
         final code = data['countryCode'] as String?;
         if (code != null) {
           _selectedCountry = allCountryCodes.firstWhere(
             (c) => c.code == code,
             orElse: () => allCountryCodes.first,
           );
-        }
-        final birth = data['birth'] as String?;
-        if (birth != null) _selectedDate = DateTime.tryParse(birth);
-        _children.clear();
-        for (final item in (data['children'] as List? ?? const [])) {
-          final m = item as Map<String, dynamic>;
-          _children.add(ChildData(
-            fullName: m['fullName'] as String? ?? '',
-            gender: m['gender'] as String? ?? 'male',
-            age: m['age'] as int?,
-            nationalId: m['nationalId'] as String?,
-          ));
         }
         _hasDraft = true;
         _showResumeBanner = true;
@@ -302,6 +237,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       _showResumeBanner = false;
       _fullNameCtrl.clear();
       _phoneCtrl.clear();
+      _emailCtrl.clear();
       _familyHeadPhoneCtrl.clear();
       _nationalIdCtrl.clear();
       _spouseNameCtrl.clear();
@@ -325,6 +261,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _pageController.dispose();
     _fullNameCtrl.dispose();
     _phoneCtrl.dispose();
+    _emailCtrl.dispose();
     _familyHeadPhoneCtrl.dispose();
     _nationalIdCtrl.dispose();
     _spouseNameCtrl.dispose();
@@ -358,7 +295,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _phoneError = phoneOk ? null : 'أدخل رقم جوال صحيح';
       });
       if (!nameOk || !phoneOk) return false;
-      if (_isJoinFlow && !_joinPasswordValid) {
+
+      if (_isJoinFlow) {
+        if (!_joinPasswordValid) {
+          _showError('تأكد من استيفاء جميع شروط كلمة المرور');
+          return false;
+        }
+        return true;
+      }
+
+      final emailOk = RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$').hasMatch(_emailCtrl.text.trim());
+      setState(() => _emailError = emailOk ? null : 'أدخل بريد إلكتروني صحيح');
+      if (!emailOk) return false;
+      if (!_passwordValid) {
         _showError('تأكد من استيفاء جميع شروط كلمة المرور');
         return false;
       }
@@ -370,23 +319,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           _showError('أدخل رقم جوال رب الأسرة صحيح');
           return false;
         }
-      }
-      return true;
-    }
-    if (_currentStep == 1) {
-      if (_maritalStatus == 'married' || _maritalStatus == 'widowed') {
-        if (_spouseNameCtrl.text.trim().split(' ').where((w) => w.isNotEmpty).length < 4) {
-          _showError('أدخل اسم الزوج/الزوجة رباعياً');
-          return false;
-        }
-      }
-      return true;
-    }
-    final passwordIdx = _surveyTemplate != null ? 4 : 3;
-    if (_currentStep == passwordIdx) {
-      if (!_passwordValid) {
-        _showError('تأكد من استيفاء جميع شروط كلمة المرور');
-        return false;
       }
       return true;
     }
@@ -415,25 +347,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         'type': 'new_family',
         'fullNameAr': fullName,
         'phone': normalizePhone(_phoneCtrl.text),
-        'nationalId': _nationalIdCtrl.text.trim().isEmpty ? null : _nationalIdCtrl.text.trim(),
-        'dateOfBirth': _selectedDate?.toIso8601String(),
-        'age': _selectedDate != null ? DateTime.now().year - _selectedDate!.year : null,
-        'maritalStatus': _maritalStatus,
-        'spouseName': spouseName,
-        'gender': _gender,
+        'email': _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
         'password': _passwordCtrl.text,
-        'hasChildren': _hasChildren,
-        'childCount': _childCount,
-        'children': _children.map((c) => {
-          'fullName': c.fullName.trim(),
-          'phone': normalizePhone(c.phone),
-          'gender': c.gender,
-          'age': c.age,
-          'nationalId': c.nationalId?.trim().isEmpty == true ? null : c.nationalId?.trim(),
-          'dateOfBirth': c.dateOfBirth?.toIso8601String(),
-          'maritalStatus': 'single',
-        }).toList(),
-        'surveyAnswers': _surveyAnswers,
       });
       await _clearDraft();
       if (mounted) _openPendingReview(res);
@@ -631,17 +546,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _buildJoinReviewStep(),
       ];
     }
-    final steps = <Widget>[
+    return [
       _buildPersonalInfoStep(),
-      _buildMaritalStatusStep(),
-      _buildChildrenStep(),
-      _buildPasswordStep(),
       _buildReviewStep(),
     ];
-    if (_surveyTemplate != null) {
-      steps.insert(3, _buildSurveyStep());
-    }
-    return steps;
   }
 
   Widget _buildStepHeader(int index) {
@@ -721,8 +629,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildStepHeader(0),
-          _buildProfileImagePicker(),
-          const SizedBox(height: 24),
           _buildLabel('الاسم الرباعي *'),
           const SizedBox(height: 4),
           TextFormField(
@@ -738,24 +644,63 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           const SizedBox(height: 6),
           _buildPhoneField(),
           const SizedBox(height: 16),
-          _buildLabel('رقم الهوية'),
+          _buildLabel('البريد الإلكتروني *'),
           const SizedBox(height: 6),
           TextFormField(
-            controller: _nationalIdCtrl,
-            keyboardType: TextInputType.number,
+            controller: _emailCtrl,
+            keyboardType: TextInputType.emailAddress,
             textDirection: TextDirection.ltr,
             textAlign: TextAlign.left,
             style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
-            decoration: _inputDecoration(hint: 'رقم الهوية (اختياري)', icon: Icons.badge_outlined),
+            decoration: _inputDecoration(hint: 'example@email.com', icon: Icons.email_outlined, errorText: _emailError),
+            onChanged: (_) {
+              if (_emailError != null) setState(() => _emailError = null);
+            },
           ),
           const SizedBox(height: 16),
-          _buildLabel('تاريخ الميلاد'),
+          _buildLabel('كلمة المرور *'),
           const SizedBox(height: 6),
-          _buildAgePicker(),
+          TextFormField(
+            controller: _passwordCtrl,
+            obscureText: _obscurePassword,
+            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
+            decoration: _inputDecoration(
+              hint: '••••••••',
+              icon: Icons.lock_outline,
+              suffix: IconButton(
+                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          _passwordStrength(),
           const SizedBox(height: 16),
-          _buildLabel('النوع'),
+          _buildLabel('تأكيد كلمة المرور *'),
           const SizedBox(height: 6),
-          _buildGenderSelector(),
+          TextFormField(
+            controller: _confirmPasswordCtrl,
+            obscureText: _obscureConfirm,
+            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16),
+            decoration: _inputDecoration(
+              hint: '••••••••',
+              icon: Icons.lock_outline,
+              suffix: IconButton(
+                icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility, size: 20),
+                onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+              ),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          if (!_passwordsMatch && _confirmPasswordCtrl.text.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'كلمتا المرور غير متطابقتين',
+                style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.error),
+              ),
+            ),
         ],
       ),
     );
@@ -1383,6 +1328,49 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
+  Widget _passwordStrength() {
+    final checks = <String>[];
+    if (!_hasMin8Chars) checks.add('8 أحرف على الأقل');
+    if (!_hasLetters) checks.add('حرف واحد على الأقل');
+    if (!_hasNumbers) checks.add('رقم واحد على الأقل');
+    if (checks.isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Text(
+        'مطلوب: ${checks.join(' · ')}',
+        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary),
+      ),
+    );
+  }
+
+  Widget _buildWhatsNextBox() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.hourglass_top_rounded, color: AppColors.primary, size: 20),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'سيُراجع ربّ أسرتك طلبك، وعند الموافقة سيُفعّل حسابك وتُطلب منك إكمال استبيان التوثيق.',
+              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary, height: 1.6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCheckItem(String label, bool condition) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -1400,93 +1388,90 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   // ─── REVIEW STEP ───────────────────────────────────────────────────
 
+  Widget _reviewItem(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.left,
+              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildReviewStep() {
-    final idx = _surveyTemplate != null ? 5 : 4;
     final fullName = _fullNameCtrl.text.trim();
-    final spouseName = (_maritalStatus == 'married' || _maritalStatus == 'widowed')
-        ? _spouseNameCtrl.text.trim()
-        : null;
-    final ageStr = _selectedDate != null ? '${DateTime.now().year - _selectedDate!.year} سنة' : '—';
+    final phone = _phoneCtrl.text.trim().isEmpty ? '-' : _phoneCtrl.text.trim();
+    final email = _emailCtrl.text.trim().isEmpty ? '-' : _emailCtrl.text.trim();
+
+    final items = [
+      _reviewItem('الاسم الرباعي', fullName.isEmpty ? '-' : fullName),
+      _reviewItem('رقم الجوال', '${_selectedCountry.dialCode} $phone'),
+      _reviewItem('البريد الإلكتروني', email),
+    ];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStepHeader(idx),
-          _buildWhatsNextBox(),
-          const SizedBox(height: 20),
-          _buildReviewSection('البيانات الشخصية', [
-            if (_profileImagePath != null) _buildReviewRow('الصورة', 'تم الاختيار'),
-            _buildReviewRow('الاسم', fullName),
-            _buildReviewRow('الجوال', '${_selectedCountry.dialCode} ${_phoneCtrl.text.trim()}'),
-            if (_nationalIdCtrl.text.trim().isNotEmpty) _buildReviewRow('الهوية', _nationalIdCtrl.text.trim()),
-            if (_selectedDate != null) _buildReviewRow('تاريخ الميلاد', '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'),
-            _buildReviewRow('النوع', _gender == 'male' ? 'ذكر' : 'أنثى'),
-          ]),
-          const SizedBox(height: 12),
-          _buildReviewSection('الحالة الاجتماعية', [
-            _buildReviewRow('الحالة', _maritalStatusLabel()),
-            if (spouseName != null) _buildReviewRow('اسم الزوج/الزوجة', spouseName),
-            if (spouseName != null && _spousePhoneCtrl.text.trim().isNotEmpty)
-              _buildReviewRow('جوال الزوج/الزوجة', _spousePhoneCtrl.text.trim()),
-            if (spouseName != null && _spouseNationalIdCtrl.text.trim().isNotEmpty)
-              _buildReviewRow('هوية الزوج/الزوجة', _spouseNationalIdCtrl.text.trim()),
-            _buildReviewRow('أبناء', _hasChildren ? 'نعم ($_childCount)' : 'لا'),
-          ]),
-          if (_hasChildren && _children.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _buildReviewSection('الأبناء ($_childCount)', _children.map((c) {
-              final ageStr2 = c.age != null ? '${c.age} سنة' : '—';
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(6)),
-                      child: Text('${_children.indexOf(c) + 1}', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
+          _buildStepHeader(_totalSteps - 1),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(children: items),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'بعد إنشاء الحساب، ستُطلب منك إكمال استبيان التوثيق في الملف الشخصي لتفعيل الحساب بشكل كامل.',
+                    style: const TextStyle(
+                      fontFamily: 'IBMPlexSansArabic',
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      height: 1.5,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(c.fullName.isEmpty ? 'الابن ${_children.indexOf(c) + 1}' : c.fullName, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, color: AppColors.textPrimary))),
-                    Text('${c.gender == 'male' ? 'ذكر' : 'أنثى'} · $ageStr2', style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary)),
-                  ],
+                  ),
                 ),
-              );
-            }).toList()),
-          ],
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWhatsNextBox() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.timeline_rounded, color: AppColors.primary, size: 20),
-              SizedBox(width: 12),
-              Text('ماذا يحدث بعد الإرسال؟',
-                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
-            ],
-          ),
-          SizedBox(height: 8),
-          Text(
-            'سيُراجع المشرف طلبك خلال 24–48 ساعة تقريبًا، ثم يُنشأ حسابك لك ولعائلتك. ستصل إليك رسالة عند القبول.',
-            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary, height: 1.7),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
-
   String _maritalStatusLabel() {
     switch (_maritalStatus) {
       case 'married': return 'متزوج';

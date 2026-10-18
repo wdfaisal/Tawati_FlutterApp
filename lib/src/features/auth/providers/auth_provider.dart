@@ -231,9 +231,61 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        isAuthenticated: false,
         error: _friendlyError(e),
       );
+    }
+  }
+
+  Future<bool> submitDocumentation({
+    String? nationalId,
+    String? dateOfBirth,
+    String? maritalStatus,
+    String? spouseName,
+    List<Map<String, dynamic>> children = const [],
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _authService.submitDocumentation(
+        nationalId: nationalId,
+        dateOfBirth: dateOfBirth,
+        maritalStatus: maritalStatus,
+        spouseName: spouseName,
+        children: children,
+      );
+      final current = state.user;
+      if (current != null) {
+        state = state.copyWith(
+          user: User(
+            id: current.id,
+            phone: current.phone,
+            fullNameAr: current.fullNameAr,
+            fullNameEn: current.fullNameEn,
+            email: current.email,
+            role: current.role,
+            familyId: current.familyId,
+            familyHeadId: current.familyHeadId,
+            avatar: current.avatar,
+            status: current.status,
+            memberNumber: current.memberNumber,
+            nationalId: nationalId ?? current.nationalId,
+            dateOfBirth: current.dateOfBirth,
+            gender: current.gender,
+            maritalStatus: maritalStatus ?? current.maritalStatus,
+            membershipLevel: current.membershipLevel,
+            documentationCompleted: true,
+            joinedAt: current.joinedAt,
+            createdAt: current.createdAt,
+          ),
+        );
+      }
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: _friendlyError(e),
+      );
+      return false;
     }
   }
 

@@ -15,6 +15,7 @@
   final String? gender;
   final String? maritalStatus;
   final String? membershipLevel;
+  final bool documentationCompleted;
   final DateTime? joinedAt;
   final DateTime createdAt;
 
@@ -35,6 +36,7 @@
     this.gender,
     this.maritalStatus,
     this.membershipLevel,
+    this.documentationCompleted = false,
     this.joinedAt,
     required this.createdAt,
   });
@@ -56,6 +58,7 @@
     gender: json['gender'],
     maritalStatus: json['marital_status'],
     membershipLevel: json['membership_level'],
+    documentationCompleted: json['documentation_completed'] == true,
     joinedAt: json['joined_at'] != null ? DateTime.tryParse(json['joined_at']) : null,
     createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
   );
