@@ -15,6 +15,163 @@ class AppDrawer extends ConsumerWidget {
     final name = user?.fullNameAr ?? 'مستخدم';
     final memberNumber = user?.memberNumber ?? '';
 
+    if (authState.isGuest) {
+      return Drawer(
+        width: MediaQuery.of(context).size.width * 0.75,
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    colors: [Color(0xFF0D9488), Color(0xFF0F766E)],
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(Icons.explore_outlined,
+                              size: 36, color: Colors.white),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => Scaffold.of(context).closeEndDrawer(),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close,
+                                color: Colors.white, size: 20),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'زائر',
+                      style: TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'تصفح محدود — سجّل الدخول للوصول الكامل',
+                      style: TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  children: [
+                    _NavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home,
+                      label: 'الرئيسية',
+                      route: 'home',
+                      onTap: (route) {
+                        Navigator.of(context).pop();
+                        context.pushNamed(route);
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    _NavItem(
+                      icon: Icons.article_outlined,
+                      activeIcon: Icons.article,
+                      label: 'الأخبار والمناسبات',
+                      route: 'news',
+                      onTap: (route) {
+                        Navigator.of(context).pop();
+                        context.pushNamed(route);
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    _NavItem(
+                      icon: Icons.groups_outlined,
+                      activeIcon: Icons.groups,
+                      label: 'المبادرات',
+                      route: 'initiatives',
+                      onTap: (route) {
+                        Navigator.of(context).pop();
+                        context.pushNamed(route);
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    _NavItem(
+                      icon: Icons.volunteer_activism_outlined,
+                      activeIcon: Icons.volunteer_activism,
+                      label: 'التبرعات',
+                      route: 'donations',
+                      onTap: (route) {
+                        Navigator.of(context).pop();
+                        context.pushNamed(route);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      context.pushNamed('login');
+                    },
+                    icon: const Icon(Icons.login, size: 20),
+                    label: const Text(
+                      'تسجيل الدخول',
+                      style: TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Drawer(
       width: MediaQuery.of(context).size.width * 0.75,
       child: Directionality(

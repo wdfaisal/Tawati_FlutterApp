@@ -2,6 +2,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'guest_mode.dart';
+
 class _InMemoryStorage {
   final _store = <String, String>{};
   Future<void> write({required String key, required String value}) async {
@@ -15,6 +17,12 @@ class ApiClient {
   late final Dio _dio;
   final Object _storage;
   bool _isRefreshing = false;
+  bool _guestMode = false;
+
+  /// When true, write requests are rejected locally so visitors never hit
+  /// protected endpoints (the backend would answer 401 anyway).
+  bool get isGuestMode => _guestMode;
+  set guestMode(bool value) => _guestMode = value;
 
   static const _authPaths = ['/auth/login', '/auth/refresh-token', '/auth/logout', '/auth/request-otp', '/auth/verify-otp', '/auth/set-password'];
 
@@ -126,13 +134,24 @@ class ApiClient {
   Future<Response> get(String path, {Map<String, dynamic>? params}) =>
       _dio.get(path, queryParameters: params);
 
-  Future<Response> post(String path, {dynamic data}) =>
-      _dio.post(path, data: data);
+  Future<Response> post(String path, {dynamic data}) {
+    _ensureNotGuest();
+    return _dio.post(path, data: data);
+  }
 
-  Future<Response> put(String path, {dynamic data}) =>
-      _dio.put(path, data: data);
+  Future<Response> put(String path, {dynamic data}) {
+    _ensureNotGuest();
+    return _dio.put(path, data: data);
+  }
 
-  Future<Response> delete(String path) => _dio.delete(path);
+  Future<Response> delete(String path) {
+    _ensureNotGuest();
+    return _dio.delete(path);
+  }
+
+  void _ensureNotGuest() {
+    if (_guestMode) throw const GuestModeException();
+  }
 
   Future<String> uploadImage({
     required String path,
@@ -140,6 +159,7 @@ class ApiClient {
     List<int>? bytes,
     String? filename,
   }) async {
+    _ensureNotGuest();
     final MultipartFile file;
     if (filePath != null && filePath.isNotEmpty) {
       file = await MultipartFile.fromFile(filePath, filename: filename);

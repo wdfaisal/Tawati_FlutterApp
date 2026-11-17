@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
+import 'package:tawati_mobile/src/core/guest_mode.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
+import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/initiatives/models/initiative.dart';
 import 'package:tawati_mobile/src/shared/widgets/shared_widgets.dart';
 
@@ -74,6 +76,13 @@ class _InitiativesTabState extends ConsumerState<InitiativesTab> {
   List<Initiative> get _registeredOnes => _filteredInitiatives.where((i) => _registeredIds.contains(i.id)).toList();
 
   Future<void> _toggleRegistration(Initiative initiative) async {
+    if (ref.read(authProvider).isGuest) {
+      await showGuestLoginPrompt(
+        context,
+        message: 'التسجيل في المبادرات متاح للأعضاء. سجّل الدخول للمشاركة.',
+      );
+      return;
+    }
     final id = initiative.id;
     final isRegistered = _registeredIds.contains(id);
 

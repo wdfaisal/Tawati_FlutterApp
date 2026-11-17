@@ -35,6 +35,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authProvider.notifier).clearError();
+      if (!mounted) return;
+      if (GoRouterState.of(context).uri.queryParameters['guestBlocked'] == '1') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'سجّل الدخول للوصول إلى هذه الميزة',
+              style: TextStyle(fontFamily: 'IBMPlexSansArabic'),
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
     });
     _initBiometric();
   }
@@ -600,7 +614,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 8),
+                          Center(
+                            child: TextButton.icon(
+                              onPressed: () async {
+                                await ref.read(authProvider.notifier).continueAsGuest();
+                                if (context.mounted) context.goNamed('home');
+                              },
+                              icon: const Icon(Icons.explore_outlined, size: 18),
+                              label: const Text(
+                                'متابعة كزائر',
+                                style: TextStyle(
+                                  fontFamily: 'IBMPlexSansArabic',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                         ],
                       ),
                     ),

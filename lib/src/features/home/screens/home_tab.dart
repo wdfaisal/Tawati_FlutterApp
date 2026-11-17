@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
+import 'package:tawati_mobile/src/core/guest_mode.dart';
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
@@ -44,7 +45,17 @@ class HomeTab extends ConsumerWidget {
     final newsAsync = ref.watch(_newsProvider);
     final initiativesAsync = ref.watch(_initiativesProvider);
     final campaignsAsync = ref.watch(_campaignsProvider);
-    final unreadCount = ref.watch(notificationsProvider).valueOrNull?.unread ?? 0;
+    final isGuest = ref.watch(authProvider).isGuest;
+    final unreadCount =
+        isGuest ? 0 : ref.watch(notificationsProvider).valueOrNull?.unread ?? 0;
+
+    void guard(VoidCallback action) {
+      if (isGuest) {
+        showGuestLoginPrompt(context);
+      } else {
+        action();
+      }
+    }
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -64,15 +75,15 @@ class HomeTab extends ConsumerWidget {
               _HomeHeader(
                 onOpenDrawer: onOpenDrawer,
                 onSearch: () => _openSearchSheet(context, ref),
-                onNotifications: () => context.push('/notifications'),
+                onNotifications: () => guard(() => context.push('/notifications')),
                 unreadCount: unreadCount,
               ),
               const _Greeting(),
               const _DocumentationBanner(),
               _QuickActionsRow(
-                onAddAnnouncement: () => context.push('/add-announcement'),
-                onAddDeath: () => context.push('/add-obituary'),
-                onOpenChats: onOpenGroups ?? () {},
+                onAddAnnouncement: () => guard(() => context.push('/add-announcement')),
+                onAddDeath: () => guard(() => context.push('/add-obituary')),
+                onOpenChats: () => guard(onOpenGroups ?? () {}),
                 onDonate: onOpenDonations ?? () {},
               ),
               _CampaignsSection(
@@ -96,7 +107,9 @@ class HomeTab extends ConsumerWidget {
           ),
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () => _showQuickActionsSheet(context, onOpenGroups, onOpenDonations),
+          onPressed: () => guard(
+            () => _showQuickActionsSheet(context, onOpenGroups, onOpenDonations),
+          ),
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 6,

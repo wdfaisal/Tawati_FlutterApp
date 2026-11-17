@@ -9,8 +9,10 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
+import 'package:tawati_mobile/src/core/guest_mode.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
 import 'package:tawati_mobile/src/core/media_url.dart';
+import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/donations/models/donation.dart';
 
 const _kPrimary = Color(0xFF044465);
@@ -52,6 +54,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
   }
 
   void _connectCampaignSocket() async {
+    if (ref.read(authProvider).isGuest) return;
     final socketService = ref.read(socketServiceProvider);
     socketService.offEvent('campaign:update');
     await socketService.connect();
@@ -766,6 +769,13 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
   }
 
   Future<void> _showDonateDialog({double? initialAmount}) async {
+    if (ref.read(authProvider).isGuest) {
+      await showGuestLoginPrompt(
+        context,
+        message: 'التبرع متاح للأعضاء فقط. سجّل الدخول لإتمام تبرعك بأمان.',
+      );
+      return;
+    }
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,

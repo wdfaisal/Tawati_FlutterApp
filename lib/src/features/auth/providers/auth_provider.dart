@@ -2,6 +2,7 @@
 
 import '../../../core/api_client.dart';
 import '../../../core/error_handler.dart';
+import '../../../core/guest_mode.dart';
 import '../../../core/providers.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
@@ -16,11 +17,15 @@ class AuthState {
   final String? error;
   final bool isAuthenticated;
 
+  /// True when the app is being browsed without an account (visitor mode).
+  final bool isGuest;
+
   AuthState({
     this.user,
     this.isLoading = false,
     this.error,
     this.isAuthenticated = false,
+    this.isGuest = false,
   });
 
   AuthState copyWith({
@@ -28,6 +33,7 @@ class AuthState {
     bool? isLoading,
     String? error,
     bool? isAuthenticated,
+    bool? isGuest,
     bool clearError = false,
   }) {
     return AuthState(
@@ -35,6 +41,7 @@ class AuthState {
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      isGuest: isGuest ?? this.isGuest,
     );
   }
 }
@@ -51,6 +58,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   AuthService get _authService => _ref.read(authServiceProvider);
   ApiClient get _apiClient => _ref.read(apiClientProvider);
+
+  /// Enables visitor mode: no tokens, read-only content, protected routes
+  /// redirected to the login screen.
+  Future<void> continueAsGuest() async {
+    await _apiClient.clearTokens();
+    _apiClient.guestMode = true;
+    guestModeNotifier.value = true;
+    await GuestSession.enable();
+    state = AuthState(isGuest: true);
+  }
+
+  /// Restores a previously chosen visitor session (used by the splash screen).
+  Future<bool> restoreGuestSession() async {
+    final active = await GuestSession.isActive();
+    if (!active) return false;
+    _apiClient.guestMode = true;
+    guestModeNotifier.value = true;
+    state = AuthState(isGuest: true);
+    return true;
+  }
+
+  Future<void> _leaveGuestMode() async {
+    _apiClient.guestMode = false;
+    guestModeNotifier.value = false;
+    await GuestSession.disable();
+  }
 
   Future<PhoneCheckResult> checkPhone({required String phone}) async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -71,13 +104,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String phone,
     required String password,
   }) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+    await _leaveGuestMode();
+    state = state.copyWith(isLoading: true, clearError: true, isGuest: false);
     try {
       final result = await _authService.login(phone: phone, password: password);
       await _apiClient.setTokens(result['access_token'], result['refresh_token']);
       state = state.copyWith(
         user: result['user'],
         isAuthenticated: true,
+        isGuest: false,
         isLoading: false,
       );
     } catch (e) {
@@ -143,7 +178,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String otp,
     required String pin,
   }) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+    await _leaveGuestMode();
+    state = state.copyWith(isLoading: true, clearError: true, isGuest: false);
     try {
       final result = await _authService.setPassword(
         phone: phone,
@@ -161,6 +197,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(
         user: loginResult['user'],
         isAuthenticated: true,
+        isGuest: false,
         isLoading: false,
       );
       return {
@@ -202,13 +239,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String phone,
     required String otp,
   }) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+    await _leaveGuestMode();
+    state = state.copyWith(isLoading: true, clearError: true, isGuest: false);
     try {
       final result = await _authService.verifyOtp(phone: phone, otp: otp);
       await _apiClient.setTokens(result['access_token'], result['refresh_token']);
       state = state.copyWith(
         user: result['user'],
         isAuthenticated: true,
+        isGuest: false,
         isLoading: false,
       );
     } catch (e) {
@@ -290,6 +329,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> loginWithBiometric() async {
+    await _leaveGuestMode();
     try {
       final user = await _authService.getMe();
       state = state.copyWith(
@@ -308,13 +348,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    final refreshToken = await _apiClient.getRefreshToken();
-    await _authService.logout(refreshToken: refreshToken);
+    if (state.isGuest) {
+      await _leaveGuestMode();
+      state = AuthState();
+      return;
+    }
+    try {
+      final refreshToken = await _apiClient.getRefreshToken();
+      await _authService.logout(refreshToken: refreshToken);
+    } catch (_) {
+      // Ignore network/server failures: the local session must still end.
+    }
     final bio = _ref.read(biometricServiceProvider);
     final biometricEnabled = await bio.isEnabled();
     if (!biometricEnabled) {
       await _apiClient.clearTokens();
     }
+    await _leaveGuestMode();
     state = AuthState();
   }
 

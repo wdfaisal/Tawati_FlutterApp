@@ -1,7 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import 'guest_mode.dart';
+
 String friendlyError(dynamic e) {
+  if (e is GuestModeException) {
+    return 'سجّل الدخول أولاً للاستفادة من هذه الميزة';
+  }
   if (kDebugMode) {
     debugPrint('═══════════ Error Report ═══════════');
     debugPrint('Type: ${e.runtimeType}');

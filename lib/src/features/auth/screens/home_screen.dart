@@ -1,7 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tawati_mobile/src/core/guest_mode.dart';
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
+import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
+import 'package:tawati_mobile/src/features/auth/screens/guest_profile_screen.dart';
 import 'package:tawati_mobile/src/features/home/screens/home_tab.dart';
 import 'package:tawati_mobile/src/features/family/screens/card_screen.dart';
 import 'package:tawati_mobile/src/features/donations/screens/donations_tab.dart';
@@ -37,21 +40,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(fcmServiceProvider).initialize();
+    if (!ref.read(authProvider).isGuest) {
+      ref.read(fcmServiceProvider).initialize();
+    }
   }
 
   void _openTab(String title) {
     if (!mounted) return;
-    final index = _visibleTabs(ref.read(appConfigProvider)).indexWhere((t) => t.title == title);
+    final index = _visibleTabs(ref.read(appConfigProvider), isGuest: ref.read(authProvider).isGuest)
+        .indexWhere((t) => t.title == title);
     if (index >= 0) {
       setState(() => _currentIndex = index);
     }
   }
 
-  List<_NavTab> _visibleTabs(Map<String, dynamic> config) {
+  List<_NavTab> _visibleTabs(Map<String, dynamic> config, {required bool isGuest}) {
     final modules = (config['modules'] as Map<String, dynamic>?) ?? const {};
     final donationsEnabled = modules['donations'] != false;
     final groupsEnabled = modules['groups'] != false;
+
+    if (isGuest) {
+      return [
+        _NavTab(
+          screen: HomeTab(
+            onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+            onOpenDonations: () => _openTab('التبرعات'),
+            onOpenGroups: () => showGuestLoginPrompt(context),
+          ),
+          title: 'الرئيسية',
+          icon: Icons.home_outlined,
+          activeIcon: Icons.home,
+        ),
+        if (donationsEnabled)
+          const _NavTab(
+            screen: DonationsTab(),
+            title: 'التبرعات',
+            icon: Icons.volunteer_activism_outlined,
+            activeIcon: Icons.volunteer_activism,
+          ),
+        const _NavTab(
+          screen: GuestProfileScreen(),
+          title: 'حسابي',
+          icon: Icons.person_outline,
+          activeIcon: Icons.person,
+        ),
+      ];
+    }
 
     return [
       _NavTab(
@@ -96,7 +130,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final config = ref.watch(appConfigProvider);
-    final tabs = _visibleTabs(config);
+    final isGuest = ref.watch(authProvider).isGuest;
+    final tabs = _visibleTabs(config, isGuest: isGuest);
     if (_currentIndex >= tabs.length) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _currentIndex = 0);

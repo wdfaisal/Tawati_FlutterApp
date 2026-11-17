@@ -1,4 +1,4 @@
-package com.tawati.tawati_mobile
+package com.af.tawati.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

@@ -4,8 +4,10 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
+import 'package:tawati_mobile/src/core/guest_mode.dart';
 import 'package:tawati_mobile/src/core/widgets/skeleton.dart';
 import 'package:tawati_mobile/src/core/media_url.dart';
+import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 import 'package:tawati_mobile/src/features/initiatives/models/initiative.dart';
 
 class InitiativeDetailScreen extends ConsumerStatefulWidget {
@@ -52,6 +54,13 @@ class _InitiativeDetailScreenState extends ConsumerState<InitiativeDetailScreen>
   }
 
   Future<void> _toggleRegistration() async {
+    if (ref.read(authProvider).isGuest) {
+      await showGuestLoginPrompt(
+        context,
+        message: 'التسجيل في المبادرات متاح للأعضاء. سجّل الدخول للمشاركة.',
+      );
+      return;
+    }
     final id = widget.campaignId;
     setState(() => _registering = true);
     try {

@@ -33,12 +33,21 @@ import 'package:tawati_mobile/src/features/notifications/screens/notifications_s
 import 'package:tawati_mobile/src/features/join_requests/screens/join_requests_tab.dart';
 import 'package:tawati_mobile/src/features/join_requests/screens/join_request_detail_screen.dart';
 import 'package:tawati_mobile/src/features/news/screens/my_announcements_tab.dart';
+import 'package:tawati_mobile/src/core/guest_mode.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
+  refreshListenable: guestModeNotifier,
+  redirect: (context, state) {
+    if (!guestModeNotifier.value) return null;
+    final path = state.uri.path;
+    if (path == '/login') return null;
+    if (isProtectedGuestRoute(path)) return '/login?guestBlocked=1';
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/',
