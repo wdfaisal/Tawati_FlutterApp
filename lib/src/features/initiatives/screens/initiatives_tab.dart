@@ -76,7 +76,7 @@ class _InitiativesTabState extends ConsumerState<InitiativesTab> {
   List<Initiative> get _registeredOnes => _filteredInitiatives.where((i) => _registeredIds.contains(i.id)).toList();
 
   Future<void> _toggleRegistration(Initiative initiative) async {
-    if (ref.read(authProvider).isGuest) {
+    if (ref.read(authProvider).isVisitor) {
       await showGuestLoginPrompt(
         context,
         message: 'التسجيل في المبادرات متاح للأعضاء. سجّل الدخول للمشاركة.',

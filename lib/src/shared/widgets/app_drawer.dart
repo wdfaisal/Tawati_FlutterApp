@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
+import 'package:tawati_mobile/src/features/auth/screens/login_sheet.dart';
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
@@ -15,7 +16,7 @@ class AppDrawer extends ConsumerWidget {
     final name = user?.fullNameAr ?? 'مستخدم';
     final memberNumber = user?.memberNumber ?? '';
 
-    if (authState.isGuest) {
+    if (authState.isVisitor) {
       return Drawer(
         width: MediaQuery.of(context).size.width * 0.75,
         child: Directionality(
@@ -143,7 +144,7 @@ class AppDrawer extends ConsumerWidget {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      context.pushNamed('login');
+                      showLoginSheet(context);
                     },
                     icon: const Icon(Icons.login, size: 20),
                     label: const Text(
@@ -186,7 +187,8 @@ class AppDrawer extends ConsumerWidget {
             BottomSection(onSignOut: () async {
               Navigator.of(context).pop();
               await ref.read(authProvider.notifier).logout();
-              if (context.mounted) context.goNamed('login');
+              await ref.read(authProvider.notifier).continueAsGuest();
+              if (context.mounted) context.goNamed('home');
             }),
           ],
         ),

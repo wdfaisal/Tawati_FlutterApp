@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
+import 'package:tawati_mobile/src/features/auth/screens/login_sheet.dart';
 
 class ActivationSuccessScreen extends StatelessWidget {
   const ActivationSuccessScreen({super.key});
@@ -76,7 +76,7 @@ class ActivationSuccessScreen extends StatelessWidget {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: () => context.goNamed('login'),
+                          onPressed: () => showLoginSheet(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: AppColors.primary,

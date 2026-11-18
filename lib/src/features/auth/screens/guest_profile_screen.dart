@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
+import 'package:tawati_mobile/src/features/auth/screens/login_sheet.dart';
 
 class GuestProfileScreen extends ConsumerWidget {
   const GuestProfileScreen({super.key});
@@ -81,7 +82,7 @@ class GuestProfileScreen extends ConsumerWidget {
             SizedBox(
               height: 54,
               child: ElevatedButton(
-                onPressed: () => context.pushNamed('login'),
+                onPressed: () => showLoginSheet(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,

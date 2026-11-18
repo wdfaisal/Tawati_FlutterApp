@@ -33,6 +33,10 @@ final _campaignsProvider = FutureProvider.autoDispose<List<Campaign>>((ref) {
   return ref.read(donationServiceProvider).getCampaigns();
 });
 
+final _fundsProvider = FutureProvider.autoDispose<List<Fund>>((ref) {
+  return ref.read(donationServiceProvider).getFunds();
+});
+
 class HomeTab extends ConsumerWidget {
   final VoidCallback? onOpenDrawer;
   final VoidCallback? onOpenDonations;
@@ -44,8 +48,8 @@ class HomeTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final newsAsync = ref.watch(_newsProvider);
     final initiativesAsync = ref.watch(_initiativesProvider);
-    final campaignsAsync = ref.watch(_campaignsProvider);
-    final isGuest = ref.watch(authProvider).isGuest;
+    final fundsAsync = ref.watch(_fundsProvider);
+    final isGuest = ref.watch(authProvider).isVisitor;
     final unreadCount =
         isGuest ? 0 : ref.watch(notificationsProvider).valueOrNull?.unread ?? 0;
 
@@ -66,6 +70,7 @@ class HomeTab extends ConsumerWidget {
             ref.invalidate(_newsProvider);
             ref.invalidate(_initiativesProvider);
             ref.invalidate(_campaignsProvider);
+            ref.invalidate(_fundsProvider);
             ref.invalidate(notificationsProvider);
           },
           child: ListView(
@@ -86,9 +91,9 @@ class HomeTab extends ConsumerWidget {
                 onOpenChats: () => guard(onOpenGroups ?? () {}),
                 onDonate: onOpenDonations ?? () {},
               ),
-              _CampaignsSection(
-                campaignsAsync: campaignsAsync,
-                onOpenAll: () => context.push('/donations'),
+              _PermanentFundsSection(
+                fundsAsync: fundsAsync,
+                onOpenAll: () => context.push('/funds'),
               ),
               _AnnouncementsSection(
                 newsAsync: newsAsync,
@@ -583,153 +588,173 @@ Widget _sectionPadding({required Widget child, double topPadding = 28}) {
   return Padding(padding: EdgeInsets.only(top: topPadding), child: child);
 }
 
-class _CampaignsSection extends StatelessWidget {
-  final AsyncValue<List<Campaign>> campaignsAsync;
+class _PermanentFundsSection extends StatelessWidget {
+  final AsyncValue<List<Fund>> fundsAsync;
   final VoidCallback onOpenAll;
 
-  const _CampaignsSection({required this.campaignsAsync, required this.onOpenAll});
+  const _PermanentFundsSection({required this.fundsAsync, required this.onOpenAll});
 
   @override
   Widget build(BuildContext context) {
-    return campaignsAsync.when(
+    return fundsAsync.when(
       data: (list) {
-        var campaigns = list.where((c) => c.isActive).toList();
-        if (campaigns.isEmpty) campaigns = list;
-        if (campaigns.isEmpty) return const SizedBox.shrink();
+        final funds = list.where((f) => f.isPermanent).toList();
+        if (funds.isEmpty) return const SizedBox.shrink();
         return _sectionPadding(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SectionHeader(title: 'صناديق التبرعات', actionLabel: 'عرض الكل', onAction: onOpenAll),
+              _SectionHeader(title: 'الصناديق الدائمة', actionLabel: 'عرض الكل', onAction: onOpenAll),
               const SizedBox(height: 12),
               SizedBox(
-                height: 178,
+                height: 170,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: campaigns.length,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: funds.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (_, i) => _CampaignCard(campaign: campaigns[i]),
+                  itemBuilder: (_, i) => _HomeFundCard(fund: funds[i]),
                 ),
               ),
             ],
           ),
         );
       },
-      loading: () => _sectionPadding(child: _horizontalSkeleton(height: 178)),
+      loading: () => _sectionPadding(child: _fundsHorizontalSkeleton()),
       error: (_, __) => const SizedBox.shrink(),
     );
   }
 }
 
-class _CampaignCard extends StatelessWidget {
-  final Campaign campaign;
+class _HomeFundCard extends StatelessWidget {
+  final Fund fund;
 
-  const _CampaignCard({required this.campaign});
+  const _HomeFundCard({required this.fund});
 
   @override
   Widget build(BuildContext context) {
-    final percent = (campaign.progress * 100).round();
     final fmt = NumberFormat('#,##0');
-    return GestureDetector(
-      onTap: () => context.push('/campaign/${campaign.id}'),
-      child: Container(
-        width: 288,
-        padding: const EdgeInsets.all(16),
+    final balanceText = _toArabicDigits(fmt.format(fund.balance));
+
+    return Container(
+      width: 170,
+      height: 170,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _kDivider),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.account_balance_wallet_outlined, size: 20, color: AppColors.primary),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(999)),
+                child: const Text(
+                  'دائم',
+                  style: TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            fund.nameAr,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: 'IBMPlexSansArabic',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _kNameColor,
+              height: 1.3,
+            ),
+          ),
+          const Spacer(),
+          const Text(
+            'الرصيد',
+            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kMuted),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  balanceText,
+                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.primary),
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  'ج.س',
+                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Widget _fundsHorizontalSkeleton() {
+  return SizedBox(
+    height: 170,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: 3,
+      separatorBuilder: (_, __) => const SizedBox(width: 12),
+      itemBuilder: (_, __) => Container(
+        width: 170,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: _kDivider),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: campaign.image != null && campaign.image!.isNotEmpty
-                      ? Image.network(
-                          resolveMediaUrl(campaign.image),
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => const _CampaignThumb(),
-                        )
-                      : const _CampaignThumb(),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        campaign.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: _kNameColor),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        campaign.fundName ?? campaign.description ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kMuted),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Text(
-                  '${_toArabicDigits('$percent')}٪',
-                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary),
-                ),
-                const Spacer(),
-                Text(
-                  'المستهدف: ${_toArabicDigits(fmt.format(campaign.targetAmount))} ج.س',
-                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kSecondary),
-                ),
-              ],
-            ),
+            skeletonBox(width: 40, height: 40, borderRadius: 12),
+            const SizedBox(height: 12),
+            skeletonLine(width: 120, height: 12, margin: EdgeInsets.zero),
             const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: campaign.progress,
-                backgroundColor: _kSoftBg,
-                color: AppColors.primary,
-                minHeight: 6,
-              ),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              height: 36,
-              child: ElevatedButton(
-                onPressed: () => context.push('/campaign/${campaign.id}'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  textStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, fontWeight: FontWeight.w600),
-                ),
-                child: const Text('تبرع الآن'),
-              ),
-            ),
+            skeletonLine(width: 80, height: 10, margin: EdgeInsets.zero),
+            const Spacer(),
+            skeletonLine(width: 50, height: 10, margin: EdgeInsets.zero),
+            const SizedBox(height: 6),
+            skeletonLine(width: 90, height: 14, margin: EdgeInsets.zero),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _AnnouncementsSection extends StatelessWidget {
@@ -1437,18 +1462,4 @@ String _toArabicDigits(String input) {
 String _formatDate(DateTime dt) {
   final d = dt.toLocal();
   return _toArabicDigits('${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}');
-}
-
-class _CampaignThumb extends StatelessWidget {
-  const _CampaignThumb();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(color: _kSoftBg, borderRadius: BorderRadius.circular(12)),
-      child: const Icon(Icons.volunteer_activism_outlined, size: 22, color: AppColors.primary),
-    );
-  }
 }

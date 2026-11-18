@@ -54,7 +54,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
   }
 
   void _connectCampaignSocket() async {
-    if (ref.read(authProvider).isGuest) return;
+    if (ref.read(authProvider).isVisitor) return;
     final socketService = ref.read(socketServiceProvider);
     socketService.offEvent('campaign:update');
     await socketService.connect();
@@ -769,7 +769,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
   }
 
   Future<void> _showDonateDialog({double? initialAmount}) async {
-    if (ref.read(authProvider).isGuest) {
+    if (ref.read(authProvider).isVisitor) {
       await showGuestLoginPrompt(
         context,
         message: 'التبرع متاح للأعضاء فقط. سجّل الدخول لإتمام تبرعك بأمان.',

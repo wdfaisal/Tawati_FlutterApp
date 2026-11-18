@@ -6,6 +6,23 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>stripe_return</string>
+			</array>
+		</dict>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>نستخدم التحقق بالبصمة/الوجه لتسهيل الدخول الآمن إلى حسابك عند تفعيل هذه الميزة.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>نحتاج الوصول إلى مكتبة الصور لإرفاق الصور والإيصالات داخل التطبيق (مثل صورة الملف الشخصي أو إيصال التبرع).</string>
 	<key>CFBundleDisplayName</key>
 	<string>Tawati</string>
 	<key>CFBundleExecutable</key>

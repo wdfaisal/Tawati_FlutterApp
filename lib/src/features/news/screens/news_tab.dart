@@ -382,7 +382,17 @@ class _NewsTabState extends ConsumerState<NewsTab> {
                   if (progress == null) return child;
                   return Container(color: const Color(0xFFF1F5F9));
                 },
-                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                // Keep the 170px slot filled with a neutral placeholder. Returning
+                // an empty widget here left a large blank block behind the card.
+                errorBuilder: (_, _, _) => Container(
+                  color: const Color(0xFFF1F5F9),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.image_outlined,
+                    size: 40,
+                    color: Color(0xFF94A3B8),
+                  ),
+                ),
               ),
             ),
           Padding(

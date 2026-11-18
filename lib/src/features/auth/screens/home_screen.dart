@@ -40,14 +40,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    if (!ref.read(authProvider).isGuest) {
+    if (ref.read(authProvider).isAuthenticated) {
       ref.read(fcmServiceProvider).initialize();
     }
+    guestBlockedNotifier.addListener(_onGuestBlocked);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (guestBlockedNotifier.value > 0) _onGuestBlocked();
+    });
+  }
+
+  @override
+  void dispose() {
+    guestBlockedNotifier.removeListener(_onGuestBlocked);
+    super.dispose();
+  }
+
+  /// The router bounced a visitor away from a protected route: explain why and
+  /// offer the sign-in sheet.
+  void _onGuestBlocked() {
+    if (!mounted || guestBlockedNotifier.value == 0) return;
+    guestBlockedNotifier.value = 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) showGuestLoginPrompt(context);
+    });
   }
 
   void _openTab(String title) {
     if (!mounted) return;
-    final index = _visibleTabs(ref.read(appConfigProvider), isGuest: ref.read(authProvider).isGuest)
+    final index = _visibleTabs(ref.read(appConfigProvider), isGuest: ref.read(authProvider).isVisitor)
         .indexWhere((t) => t.title == title);
     if (index >= 0) {
       setState(() => _currentIndex = index);
@@ -72,8 +92,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           activeIcon: Icons.home,
         ),
         if (donationsEnabled)
-          const _NavTab(
-            screen: DonationsTab(),
+          _NavTab(
+            screen: DonationsTab(onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer()),
             title: 'التبرعات',
             icon: Icons.volunteer_activism_outlined,
             activeIcon: Icons.volunteer_activism,
@@ -105,8 +125,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         activeIcon: Icons.badge,
       ),
       if (donationsEnabled)
-        const _NavTab(
-          screen: DonationsTab(),
+        _NavTab(
+          screen: DonationsTab(onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer()),
           title: 'التبرعات',
           icon: Icons.volunteer_activism_outlined,
           activeIcon: Icons.volunteer_activism,
@@ -130,7 +150,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final config = ref.watch(appConfigProvider);
-    final isGuest = ref.watch(authProvider).isGuest;
+    final isGuest = ref.watch(authProvider).isVisitor;
     final tabs = _visibleTabs(config, isGuest: isGuest);
     if (_currentIndex >= tabs.length) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

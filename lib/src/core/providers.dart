@@ -7,6 +7,7 @@ import '../features/groups/services/group_service.dart';
 import '../features/initiatives/services/initiative_service.dart';
 import '../features/news/services/news_service.dart';
 import 'api_client.dart';
+import 'app_config.dart';
 import 'biometric_service.dart';
 import 'config/app_config_service.dart';
 import 'fcm_service.dart';
@@ -14,11 +15,7 @@ import 'local_mute_service.dart';
 import 'socket_service.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  const baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://54.251.69.36/api/v1',
-  );
-  return ApiClient(baseUrl: baseUrl);
+  return ApiClient(baseUrl: kApiBaseUrl);
 });
 
 final authServiceProvider = Provider<AuthService>((ref) {

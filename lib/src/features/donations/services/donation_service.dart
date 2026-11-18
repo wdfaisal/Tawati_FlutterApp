@@ -14,6 +14,12 @@ class DonationService {
     return list.map((e) => Campaign.fromJson(e)).toList();
   }
 
+  Future<List<Fund>> getFunds() async {
+    final response = await _api.get('/funds');
+    final list = response.data['data'] as List<dynamic>;
+    return list.map((e) => Fund.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   Future<Campaign> getCampaignDetail(String id) async {
     final response = await _api.get('/campaigns/$id');
     return Campaign.fromJson(response.data['data']);

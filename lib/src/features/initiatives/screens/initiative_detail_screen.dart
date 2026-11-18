@@ -54,7 +54,7 @@ class _InitiativeDetailScreenState extends ConsumerState<InitiativeDetailScreen>
   }
 
   Future<void> _toggleRegistration() async {
-    if (ref.read(authProvider).isGuest) {
+    if (ref.read(authProvider).isVisitor) {
       await showGuestLoginPrompt(
         context,
         message: 'التسجيل في المبادرات متاح للأعضاء. سجّل الدخول للمشاركة.',

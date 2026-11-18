@@ -890,7 +890,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               onPressed: () async {
                 Navigator.of(ctx).pop();
                 await ref.read(authProvider.notifier).logout();
-                if (context.mounted) context.go('/login');
+                await ref.read(authProvider.notifier).continueAsGuest();
+                if (context.mounted) context.goNamed('home');
               },
               child: const Text('تسجيل الخروج', style: TextStyle(fontFamily: 'IBMPlexSansArabic', color: AppColors.error)),
             ),

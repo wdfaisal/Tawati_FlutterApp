@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:go_router/go_router.dart';
 
 import 'theme/app_theme.dart';
+import '../features/auth/screens/login_sheet.dart';
 
 /// Global guest-mode flag.
 ///
-/// The router listens to this value so protected screens are redirected to the
-/// login screen as soon as a visitor tries to open them.
+/// The router listens to this value so protected screens are redirected home as
+/// soon as a visitor tries to open them.
 final ValueNotifier<bool> guestModeNotifier = ValueNotifier<bool>(false);
+
+/// Bumped when the router blocks a visitor from a protected route.
+///
+/// The home screen listens to it and shows the "this feature is for members"
+/// prompt, which offers the sign-in sheet.
+final ValueNotifier<int> guestBlockedNotifier = ValueNotifier<int>(0);
+
+void notifyGuestBlocked() {
+  guestBlockedNotifier.value++;
+}
 
 /// Thrown by [ApiClient] when a visitor attempts a write operation.
 class GuestModeException implements Exception {
@@ -44,6 +54,33 @@ class GuestSession {
   }
 }
 
+/// Remembers that the intro slides were shown, so they appear only on the very
+/// first launch. Afterwards the app opens directly in visitor (guest) mode.
+class AppIntro {
+  static const _storageKey = 'onboarding_seen';
+  static const _storage = FlutterSecureStorage();
+
+  static Future<bool> hasSeen() async {
+    try {
+      return await _storage.read(key: _storageKey) == '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> markSeen() async {
+    try {
+      await _storage.write(key: _storageKey, value: '1');
+    } catch (_) {}
+  }
+}
+
+/// Cached copy of [AppIntro.hasSeen], filled during startup.
+///
+/// The router needs this decision synchronously, so it is read once while the
+/// app boots instead of awaiting secure storage inside the redirect.
+bool introSeen = false;
+
 /// Routes a visitor is not allowed to open.
 bool isProtectedGuestRoute(String path) {
   const exact = {
@@ -68,7 +105,8 @@ bool isProtectedGuestRoute(String path) {
 
 /// Shows the "sign in to continue" dialog.
 ///
-/// Returns `true` when the visitor chose to go to the login screen.
+/// When the visitor chooses to sign in, the sign-in bottom sheet is opened.
+/// Returns `true` when the visitor chose to sign in.
 Future<bool> showGuestLoginPrompt(
   BuildContext context, {
   String? message,
@@ -150,7 +188,7 @@ Future<bool> showGuestLoginPrompt(
   );
 
   if (goToLogin == true && context.mounted) {
-    context.goNamed('login');
+    await showLoginSheet(context);
   }
   return goToLogin == true;
 }

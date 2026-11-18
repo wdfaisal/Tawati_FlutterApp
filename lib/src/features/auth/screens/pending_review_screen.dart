@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
+import 'package:tawati_mobile/src/features/auth/screens/login_sheet.dart';
 
 class PendingReviewScreen extends StatelessWidget {
   final String requestId;
@@ -105,7 +105,7 @@ class PendingReviewScreen extends StatelessWidget {
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: () => context.goNamed('login'),
+                        onPressed: () => showLoginSheet(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,

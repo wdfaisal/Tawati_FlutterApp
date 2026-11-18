@@ -223,3 +223,33 @@ class PaymentMethod {
 
   bool get isManual => type == 'manual';
 }
+
+class Fund {
+  final String id;
+  final String nameAr;
+  final String? description;
+  final String type; // permanent | temporary
+  final bool isActive;
+  final double balance;
+
+  Fund({
+    required this.id,
+    required this.nameAr,
+    this.description,
+    required this.type,
+    required this.isActive,
+    required this.balance,
+  });
+
+  factory Fund.fromJson(Map<String, dynamic> json) => Fund(
+        id: json['_id'] ?? json['id'] ?? '',
+        nameAr: json['name_ar'] ?? '',
+        description: json['description'],
+        type: json['type'] ?? 'permanent',
+        isActive: json['is_active'] ?? true,
+        balance: (json['balance'] ?? 0).toDouble(),
+      );
+
+  bool get isPermanent => type == 'permanent';
+  String get typeLabel => isPermanent ? 'صندوق دائم' : 'صندوق مؤقت';
+}

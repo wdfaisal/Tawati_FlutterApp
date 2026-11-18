@@ -20,6 +20,11 @@ class AuthState {
   /// True when the app is being browsed without an account (visitor mode).
   final bool isGuest;
 
+  /// True whenever nobody is signed in — either because the visitor chose to
+  /// browse as a guest or simply because there is no member session yet.
+  /// The UI uses this so an unknown session never falls back to member screens.
+  bool get isVisitor => isGuest || !isAuthenticated;
+
   AuthState({
     this.user,
     this.isLoading = false,

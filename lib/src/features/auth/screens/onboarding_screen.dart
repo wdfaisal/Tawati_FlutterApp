@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import 'package:tawati_mobile/src/core/guest_mode.dart';
+import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 
 const _kBgDark = Color(0xFF0F172A); // slate-900
 const _kOrange = Color(0xFFF97316); // orange-500
 const _kSlate700 = Color(0xFF334155);
 const _kSlate400 = Color(0xFF94A3B8);
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _currentPage = 0;
 
   static const _pages = [
@@ -40,11 +44,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   bool get _isLast => _currentPage == _pages.length - 1;
 
+  /// Ends the intro: it is remembered so it only shows on the first launch, and
+  /// the app continues straight in visitor (guest) mode. Signing in is offered
+  /// later from the side drawer or the "حسابي" tab.
+  Future<void> _finish() async {
+    await AppIntro.markSeen();
+    introSeen = true;
+    await ref.read(authProvider.notifier).continueAsGuest();
+    if (mounted) context.goNamed('home');
+  }
+
   void _onNext() {
     if (!_isLast) {
       setState(() => _currentPage++);
     } else {
-      context.pushNamed('login');
+      _finish();
     }
   }
 
@@ -177,7 +191,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(width: 40)
           else
             TextButton(
-              onPressed: () => context.pushNamed('login'),
+              onPressed: _finish,
               style: TextButton.styleFrom(
                 foregroundColor: _kSlate400,
                 padding: const EdgeInsets.symmetric(vertical: 4),

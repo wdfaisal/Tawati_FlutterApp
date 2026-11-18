@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Family;
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'package:tawati_mobile/src/core/legal.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 
@@ -111,6 +113,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         context.goNamed('splash');
       }
+    }
+  }
+
+  Future<void> _contactSupport() async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: LegalLinks.supportEmail,
+      queryParameters: {'subject': LegalLinks.supportSubject},
+    );
+    final ok = await launchUrl(uri);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر فتح تطبيق البريد', style: TextStyle(fontFamily: 'IBMPlexSansArabic'))),
+      );
     }
   }
 
@@ -372,46 +388,48 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
             _buildSectionCard(
-              title: 'الدعم',
-              icon: Icons.help_outline,
+              title: 'الخصوصية والدعم',
+              icon: Icons.privacy_tip_outlined,
               children: [
                 ListTile(
-                  leading: const Icon(
-                    Icons.email_outlined,
-                    color: Color(0xFF0D9488),
-                  ),
-                  title: const Text(
-                    'تواصل معنا',
-                    style: TextStyle(
-                      fontFamily: 'IBMPlexSansArabic',
-                      fontSize: 15,
-                    ),
-                  ),
-                  trailing: const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Color(0xFF94A3B8),
-                  ),
-                  onTap: () {},
+                  leading: const Icon(Icons.policy_outlined, color: Color(0xFF0D9488)),
+                  title: const Text('سياسة الخصوصية', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15)),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF94A3B8)),
+                  onTap: () => context.push('/privacy-policy'),
                 ),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
                 ListTile(
-                  leading: const Icon(
-                    Icons.question_answer_outlined,
-                    color: Color(0xFF0D9488),
-                  ),
+                  leading: const Icon(Icons.description_outlined, color: Color(0xFF0D9488)),
+                  title: const Text('الشروط والأحكام', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15)),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF94A3B8)),
+                  onTap: () => context.push('/terms'),
+                ),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                ListTile(
+                  leading: const Icon(Icons.email_outlined, color: Color(0xFF0D9488)),
+                  title: const Text('التواصل مع الدعم', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15)),
+                  subtitle: const Text(LegalLinks.supportEmail, style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Color(0xFF94A3B8))),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF94A3B8)),
+                  onTap: _contactSupport,
+                ),
+              ],
+            ),
+            _buildSectionCard(
+              title: 'الحساب',
+              icon: Icons.manage_accounts_outlined,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Color(0xFFB91C1C)),
                   title: const Text(
-                    'الأسئلة الشائعة',
-                    style: TextStyle(
-                      fontFamily: 'IBMPlexSansArabic',
-                      fontSize: 15,
-                    ),
+                    'حذف الحساب',
+                    style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15, color: Color(0xFFB91C1C), fontWeight: FontWeight.w600),
                   ),
-                  trailing: const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Color(0xFF94A3B8),
+                  subtitle: const Text(
+                    'تقديم طلب لحذف حسابك وبياناتك',
+                    style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Color(0xFF94A3B8)),
                   ),
-                  onTap: () {},
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF94A3B8)),
+                  onTap: () => context.push('/account-deletion'),
                 ),
               ],
             ),

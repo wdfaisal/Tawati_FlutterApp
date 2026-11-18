@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -1378,15 +1378,48 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         color: AppColors.primaryLight,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.hourglass_top_rounded, color: AppColors.primary, size: 20),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'سيُراجع ربّ أسرتك طلبك، وعند الموافقة سيُفعّل حسابك وتُطلب منك إكمال استبيان التوثيق.',
-              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary, height: 1.6),
-            ),
+          const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.hourglass_top_rounded, color: AppColors.primary, size: 20),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'بعد إرسال الطلب سيتم مراجعته من قبل الإدارة، ويمكنك متابعة حالة الطلب من خلال التطبيق.',
+                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: AppColors.textSecondary, height: 1.6),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              const Text(
+                'بإرسال الطلب فأنت توافق على',
+                style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary),
+              ),
+              GestureDetector(
+                onTap: () => context.push('/privacy-policy'),
+                child: const Text(
+                  'سياسة الخصوصية',
+                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600, decoration: TextDecoration.underline),
+                ),
+              ),
+              const Text('و', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.textSecondary)),
+              GestureDetector(
+                onTap: () => context.push('/terms'),
+                child: const Text(
+                  'الشروط والأحكام',
+                  style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600, decoration: TextDecoration.underline),
+                ),
+              ),
+            ],
           ),
         ],
       ),

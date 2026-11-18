@@ -1,6 +1,7 @@
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import 'api_client.dart';
+import 'app_config.dart';
 
 class SocketService {
   io.Socket? _socket;
@@ -23,14 +24,10 @@ class SocketService {
   Future<void> connect() async {
     if (_socket != null && _socket!.connected) return;
 
-    const apiBaseUrl = String.fromEnvironment(
-      'API_BASE_URL',
-      defaultValue: 'http://54.251.69.36/api/v1',
-    );
     final token = await _api?.getAccessToken() ?? '';
 
     _socket = io.io(
-      _serverUrlFromApi(apiBaseUrl),
+      _serverUrlFromApi(kApiBaseUrl),
       io.OptionBuilder()
           .setTransports(['websocket'])
           .setAuth({'token': token})

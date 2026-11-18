@@ -1,7 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tawati_mobile/src/features/auth/screens/onboarding_screen.dart';
-import 'package:tawati_mobile/src/features/auth/screens/login_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/first_login_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/account_documentation_screen.dart';
 import 'package:tawati_mobile/src/features/auth/screens/family_setup_screen.dart';
@@ -25,6 +24,7 @@ import 'package:tawati_mobile/src/features/donations/screens/my_donations_screen
 import 'package:tawati_mobile/src/features/donations/screens/admin_donations_screen.dart';
 import 'package:tawati_mobile/src/features/donations/screens/donation_detail_screen.dart';
 import 'package:tawati_mobile/src/features/donations/screens/donation_reports_screen.dart';
+import 'package:tawati_mobile/src/features/donations/screens/funds_screen.dart';
 import 'package:tawati_mobile/src/features/family/screens/family_tree_screen.dart';
 import 'package:tawati_mobile/src/features/initiatives/screens/initiatives_tab.dart';
 import 'package:tawati_mobile/src/features/initiatives/screens/initiative_detail_screen.dart';
@@ -33,6 +33,8 @@ import 'package:tawati_mobile/src/features/notifications/screens/notifications_s
 import 'package:tawati_mobile/src/features/join_requests/screens/join_requests_tab.dart';
 import 'package:tawati_mobile/src/features/join_requests/screens/join_request_detail_screen.dart';
 import 'package:tawati_mobile/src/features/news/screens/my_announcements_tab.dart';
+import 'package:tawati_mobile/src/features/profile/screens/legal_document_screen.dart';
+import 'package:tawati_mobile/src/features/profile/screens/account_deletion_screen.dart';
 import 'package:tawati_mobile/src/core/guest_mode.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -42,10 +44,18 @@ final appRouter = GoRouter(
   initialLocation: '/',
   refreshListenable: guestModeNotifier,
   redirect: (context, state) {
-    if (!guestModeNotifier.value) return null;
     final path = state.uri.path;
-    if (path == '/login') return null;
-    if (isProtectedGuestRoute(path)) return '/login?guestBlocked=1';
+    if (guestModeNotifier.value) {
+      // Visitors are never sent to a standalone login page: protected routes
+      // fall back to the home screen and the sign-in sheet is offered instead.
+      if (isProtectedGuestRoute(path)) {
+        notifyGuestBlocked();
+        return '/home';
+      }
+      return null;
+    }
+    // Returning visitors (intro already seen) skip the intro slides.
+    if (path == '/' && introSeen) return '/home';
     return null;
   },
   routes: [
@@ -53,44 +63,6 @@ final appRouter = GoRouter(
       path: '/',
       name: 'onboarding',
       builder: (c, s) => const OnboardingScreen(),
-    ),
-    GoRoute(
-      path: '/login',
-      name: 'login',
-      pageBuilder: (context, state) => CustomTransitionPage(
-        key: state.pageKey,
-        child: const LoginScreen(),
-        transitionDuration: const Duration(milliseconds: 500),
-        reverseTransitionDuration: const Duration(milliseconds: 350),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          );
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1.0, 0),
-              end: Offset.zero,
-            ).animate(curved),
-            child: FadeTransition(
-              opacity: curved,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 28,
-                      offset: const Offset(-14, 0),
-                    ),
-                  ],
-                ),
-                child: child,
-              ),
-            ),
-          );
-        },
-      ),
     ),
     GoRoute(
       path: '/register',
@@ -254,6 +226,26 @@ final appRouter = GoRouter(
       path: '/donations',
       name: 'donations',
       builder: (c, s) => const DonationsTab(),
+    ),
+    GoRoute(
+      path: '/funds',
+      name: 'funds',
+      builder: (c, s) => const FundsScreen(),
+    ),
+    GoRoute(
+      path: '/privacy-policy',
+      name: 'privacyPolicy',
+      builder: (c, s) => const LegalDocumentScreen(type: LegalDocumentType.privacy),
+    ),
+    GoRoute(
+      path: '/terms',
+      name: 'terms',
+      builder: (c, s) => const LegalDocumentScreen(type: LegalDocumentType.terms),
+    ),
+    GoRoute(
+      path: '/account-deletion',
+      name: 'accountDeletion',
+      builder: (c, s) => const AccountDeletionScreen(),
     ),
     GoRoute(
       path: '/family-tree',

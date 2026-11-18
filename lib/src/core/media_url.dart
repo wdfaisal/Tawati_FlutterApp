@@ -1,12 +1,5 @@
-const String kApiBase = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://54.251.69.36/api/v1',
-);
-
-final String kMediaOrigin = kApiBase.replaceFirst(RegExp(r'/api/v1$|/api$'), '');
-
-String resolveMediaUrl(String? url) {
-  if (url == null || url.isEmpty) return '';
-  if (url.startsWith('http')) return url;
-  return '$kMediaOrigin$url';
-}
+// Media helpers now live with the rest of the configuration so the API host is
+// defined in exactly one place. This file is kept as a re-export so existing
+// imports keep working.
+export 'app_config.dart'
+    show kApiBase, kMediaOrigin, kServerOrigin, resolveMediaUrl;
