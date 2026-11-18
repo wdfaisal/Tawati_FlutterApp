@@ -48,12 +48,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (hasReleaseKeystore) {
-                signingConfigs.getByName("release")
-            } else {
-                // Fallback for local development only. Configure android/key.properties for production releases.
-                signingConfig = signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName(if (hasReleaseKeystore) "release" else "debug")
             // R8 fails on react_native_stripe_sdk missing classes; keep minification off for now.
             isMinifyEnabled = false
             isShrinkResources = false
