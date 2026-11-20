@@ -7,7 +7,7 @@
 ///
 /// ```bash
 /// # local backend over the LAN (this is also the debug default)
-/// flutter run --dart-define=API_BASE_URL=http://10.131.76.182:3000/api/v1
+/// flutter run --dart-define=API_BASE_URL=http://10.164.137.182:3000/api/v1
 ///
 /// # Android emulator talking to the host machine
 /// flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1
@@ -19,11 +19,11 @@ library;
 
 import 'package:flutter/foundation.dart';
 
-/// API root of the development backend on this machine's Wi-Fi address.
+/// API root of the development backend on this machine's Wi-Fi/LAN address.
 ///
 /// Change this one line when the router hands out a different IP, or pass
 /// `--dart-define=API_BASE_URL=...` and leave the code untouched.
-const String kLanApiBaseUrl = 'http://10.131.76.182:3000/api/v1';
+const String kLanApiBaseUrl = 'http://10.164.137.182:3000/api/v1';
 
 /// API root used by release builds.
 const String kProductionApiBaseUrl = 'http://54.251.69.36/api/v1';

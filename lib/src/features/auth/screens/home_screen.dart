@@ -4,7 +4,7 @@ import 'package:tawati_mobile/src/core/guest_mode.dart';
 import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
-import 'package:tawati_mobile/src/features/auth/screens/guest_profile_screen.dart';
+import 'package:tawati_mobile/src/features/auth/screens/guest_settings_screen.dart';
 import 'package:tawati_mobile/src/features/home/screens/home_tab.dart';
 import 'package:tawati_mobile/src/features/family/screens/card_screen.dart';
 import 'package:tawati_mobile/src/features/donations/screens/donations_tab.dart';
@@ -99,10 +99,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             activeIcon: Icons.volunteer_activism,
           ),
         const _NavTab(
-          screen: GuestProfileScreen(),
-          title: 'حسابي',
-          icon: Icons.person_outline,
-          activeIcon: Icons.person,
+          screen: GuestSettingsScreen(),
+          title: 'الإعدادات',
+          icon: Icons.settings_outlined,
+          activeIcon: Icons.settings,
         ),
       ];
     }

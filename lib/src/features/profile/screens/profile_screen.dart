@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:tawati_mobile/src/core/legal.dart';
 import 'package:tawati_mobile/src/core/providers.dart';
+import 'package:tawati_mobile/src/core/theme/theme_controller.dart';
 import 'package:tawati_mobile/src/features/auth/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -15,7 +16,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  bool _isDarkMode = false;
   bool _biometricEnabled = false;
   int _myAnnouncementsCount = 0;
 
@@ -317,19 +317,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                   subtitle: Text(
-                    _isDarkMode ? 'مفعّل' : 'معطّل',
+                    ref.watch(themeModeProvider) == ThemeMode.dark ? 'مفعّل' : 'معطّل',
                     style: const TextStyle(
                       fontFamily: 'IBMPlexSansArabic',
                       fontSize: 12,
                       color: Color(0xFF94A3B8),
                     ),
                   ),
-                  value: _isDarkMode,
+                  value: ref.watch(themeModeProvider) == ThemeMode.dark,
                   onChanged: (value) {
-                    setState(() => _isDarkMode = value);
+                    ref.read(themeModeProvider.notifier).setMode(
+                          value ? ThemeMode.dark : ThemeMode.light,
+                        );
                   },
                   secondary: Icon(
-                    _isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                    ref.watch(themeModeProvider) == ThemeMode.dark
+                        ? Icons.dark_mode
+                        : Icons.light_mode,
                     color: const Color(0xFF0D9488),
                   ),
                   activeColor: const Color(0xFF0D9488),

@@ -12,6 +12,7 @@ import 'src/core/fcm_service.dart';
 import 'src/routing/app_router.dart';
 import 'src/core/guest_mode.dart';
 import 'src/core/theme/app_theme.dart';
+import 'src/core/theme/theme_controller.dart';
 import 'src/core/providers.dart';
 import 'src/features/auth/providers/auth_provider.dart';
 
@@ -51,6 +52,8 @@ void main() async {
     }
   }
   final container = ProviderContainer();
+  final initialThemeMode = await ThemeModeStorage.load();
+  container.read(themeModeProvider.notifier).state = initialThemeMode;
   await _restoreSession(container);
   runApp(
     UncontrolledProviderScope(
@@ -130,12 +133,20 @@ class _TawatiAppState extends ConsumerState<TawatiApp> {
   @override
   Widget build(BuildContext context) {
     final config = ref.watch(appConfigProvider);
+    final themeMode = ref.watch(themeModeProvider);
     final primaryHex = config['primary_color'] as String?;
     Color? seedColor;
     if (primaryHex != null && primaryHex.isNotEmpty) {
       final value = int.tryParse('0xFF${primaryHex.replaceFirst('#', '')}');
       if (value != null) seedColor = Color(value);
     }
+
+    final lightTheme = seedColor != null
+        ? AppTheme.fromSeed(seedColor)
+        : AppTheme.light;
+    final darkTheme = seedColor != null
+        ? AppTheme.fromSeed(seedColor, brightness: Brightness.dark)
+        : AppTheme.dark;
 
     return MaterialApp.router(
       title: config['app_name'] as String? ?? 'تواتي',
@@ -149,11 +160,9 @@ class _TawatiAppState extends ConsumerState<TawatiApp> {
         quill.FlutterQuillLocalizations.delegate,
       ],
       routerConfig: appRouter,
-      theme: seedColor != null
-          ? AppTheme.fromSeed(seedColor)
-          : AppTheme.light,
-      darkTheme: null,
-      themeMode: ThemeMode.light,
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
     );
   }
 }

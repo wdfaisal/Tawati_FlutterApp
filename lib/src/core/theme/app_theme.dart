@@ -40,10 +40,10 @@ class AppTheme {
         centerTitle: true,
         elevation: 0,
         scrolledUnderElevation: 0,
-        systemOverlayStyle: const SystemUiOverlayStyle(
+        systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarBrightness: Brightness.light,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
           systemStatusBarContrastEnforced: false,
         ),
         backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
