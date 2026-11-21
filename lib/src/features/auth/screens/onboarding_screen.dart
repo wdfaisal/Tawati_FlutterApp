@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -180,11 +181,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       padding: const EdgeInsets.all(32),
       child: Row(
         children: [
-          Image.asset(
-            'assets/images/splash_logo.png',
-            height: 56,
+          SvgPicture.asset(
+            'assets/logo/tawati-primary.svg',
+            height: 48,
             fit: BoxFit.contain,
-            errorBuilder: (_, _, _) => const SizedBox(width: 56, height: 56),
           ),
           const Spacer(),
           if (_isLast)

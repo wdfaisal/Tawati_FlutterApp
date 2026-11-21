@@ -124,17 +124,13 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
                 if (_campaigns.isNotEmpty) _ImpactBanner(campaigns: _campaigns),
                 _FundsSection(
                   funds: _funds.where((f) => f.isPermanent).toList(),
-                  title: 'الصناديق الدائمة',
+                  title: '\u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 \u0627\u0644\u062F\u0627\u0626\u0645\u0629',
                   onOpenAll: () => context.push('/funds'),
                 ),
                 _CampaignsSection(
-                  title: 'المبادرات النشطة',
-                  campaigns: _campaigns.where((c) => c.isActive).toList(),
-                  emptyMessage: _funds.isNotEmpty ? '' : 'لا توجد مبادرات نشطة حالياً',
-                ),
-                _CampaignsSection(
-                  title: 'مبادرات مكتملة',
-                  campaigns: _campaigns.where((c) => c.status == 'completed').toList(),
+                  title: '\u062D\u0645\u0644\u0627\u062A \u0627\u0644\u062A\u0628\u0631\u0639',
+                  campaigns: _campaigns,
+                  emptyMessage: '\u0644\u0627 \u062A\u0648\u062C\u062F \u062D\u0645\u0644\u0627\u062A \u062D\u0627\u0644\u064A\u0627\u064B',
                 ),
               ],
               const SizedBox(height: 28),
@@ -205,11 +201,10 @@ class _DonationsHeader extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (onBack != null)
-            _CircleButton(icon: Icons.arrow_forward_rounded, onTap: onBack)
-          else
-            _CircleButton(icon: Icons.menu_rounded, onTap: onOpenDrawer),
-          const SizedBox(width: 12),
+          if (onBack != null) ...[
+            _CircleButton(icon: Icons.arrow_forward_rounded, onTap: onBack),
+            const SizedBox(width: 12),
+          ],
           const Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -854,20 +849,18 @@ class _CampaignCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        SizedBox(
-                          height: 38,
-                          child: ElevatedButton(
-                            onPressed: () => context.push('/campaign/${campaign.id}'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isActive ? AppColors.primary : const Color(0xFFE2E8F0),
-                              foregroundColor: isActive ? Colors.white : _kNameColor,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              textStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w700),
-                            ),
-                            child: Text(isActive ? 'تبرع الآن' : 'عرض التفاصيل'),
+                        ElevatedButton(
+                          onPressed: () => context.push('/campaign/${campaign.id}'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isActive ? AppColors.primary : const Color(0xFFE2E8F0),
+                            foregroundColor: isActive ? Colors.white : _kNameColor,
+                            elevation: 0,
+                            minimumSize: const Size(0, 38),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            textStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w700),
                           ),
+                          child: Text(isActive ? 'تبرع الآن' : 'عرض التفاصيل'),
                         ),
                       ],
                     ),

@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
@@ -217,9 +218,9 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(
-                  width: 100,
-                  height: 40,
-                  child: Image.asset('assets/images/splash_logo.png', fit: BoxFit.contain),
+                  width: 88,
+                  height: 36,
+                  child: SvgPicture.asset('assets/logo/tawati-primary.svg', fit: BoxFit.contain),
                 ),
                 _buildSearchButton(),
               ],

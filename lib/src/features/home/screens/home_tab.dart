@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
@@ -85,12 +86,15 @@ class HomeTab extends ConsumerWidget {
               ),
               const _Greeting(),
               const _DocumentationBanner(),
-              _QuickActionsRow(
-                onAddAnnouncement: () => guard(() => context.push('/add-announcement')),
-                onAddDeath: () => guard(() => context.push('/add-obituary')),
-                onOpenChats: () => guard(onOpenGroups ?? () {}),
-                onDonate: onOpenDonations ?? () {},
-              ),
+              if (isGuest)
+                const _GuestPromoSlider()
+              else
+                _QuickActionsRow(
+                  onAddAnnouncement: () => guard(() => context.push('/add-announcement')),
+                  onAddDeath: () => guard(() => context.push('/add-obituary')),
+                  onOpenChats: () => guard(onOpenGroups ?? () {}),
+                  onDonate: onOpenDonations ?? () {},
+                ),
               _PermanentFundsSection(
                 fundsAsync: fundsAsync,
                 onOpenAll: () => context.push('/funds'),
@@ -229,9 +233,9 @@ class _HomeHeader extends StatelessWidget {
             onTap: onOpenDrawer,
             behavior: HitTestBehavior.opaque,
             child: SizedBox(
-              width: 100,
-              height: 40,
-              child: Image.asset('assets/images/splash_logo.png', fit: BoxFit.contain),
+              width: 88,
+              height: 36,
+              child: SvgPicture.asset('assets/logo/tawati-primary.svg', fit: BoxFit.contain),
             ),
           ),
           const Spacer(),
@@ -334,6 +338,171 @@ class _SearchButton extends StatelessWidget {
                 border: Border.all(color: Colors.white, width: 1.5),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuestPromoSlider extends StatefulWidget {
+  const _GuestPromoSlider();
+
+  @override
+  State<_GuestPromoSlider> createState() => _GuestPromoSliderState();
+}
+
+class _GuestPromoSliderState extends State<_GuestPromoSlider> {
+  final _controller = PageController(viewportFraction: 0.92);
+  int _index = 0;
+
+  static const _slides = [
+    _PromoSlideData(
+      title: 'مرحبًا بك في تواتي',
+      subtitle: 'تابع أخبار العائلة، الإعلانات، والمبادرات الخيرية في مكان واحد.',
+      icon: Icons.family_restroom_rounded,
+      colors: [AppColors.primary, Color(0xFF0F766E)],
+    ),
+    _PromoSlideData(
+      title: 'ساهم في الخير',
+      subtitle: 'اطّلع على حملات التبرع وصناديق الدعم وساهم في إحداث أثر.',
+      icon: Icons.volunteer_activism_rounded,
+      colors: [Color(0xFF0A6FA8), AppColors.primary],
+    ),
+    _PromoSlideData(
+      title: 'ابقَ على اطلاع',
+      subtitle: 'آخر الأخبار والإعلانات والمناسبات تصلك بسهولة وبشكل منظم.',
+      icon: Icons.campaign_rounded,
+      colors: [Color(0xFF0F766E), Color(0xFF115E59)],
+    ),
+  ];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 20),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 170,
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: _slides.length,
+              onPageChanged: (i) => setState(() => _index = i),
+              itemBuilder: (context, i) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: _PromoSlide(data: _slides[i]),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_slides.length, (i) {
+              final active = i == _index;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: active ? 20 : 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: active ? AppColors.primary : const Color(0xFFD6DEE3),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PromoSlideData {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final List<Color> colors;
+  const _PromoSlideData({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.colors,
+  });
+}
+
+class _PromoSlide extends StatelessWidget {
+  final _PromoSlideData data;
+  const _PromoSlide({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: data.colors,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: data.colors.first.withValues(alpha: 0.22),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  data.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  data.subtitle,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 12.5,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    height: 1.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(data.icon, color: Colors.white, size: 32),
           ),
         ],
       ),
