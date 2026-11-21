@@ -1,4 +1,7 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Family;
 import 'package:go_router/go_router.dart';
 
@@ -574,17 +577,51 @@ class NewsDetailScreen extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: 16),
-        Text(
-          body.isNotEmpty ? body : 'لا يوجد محتوى لهذا الإعلان بعد.',
-          style: const TextStyle(
-            fontFamily: 'IBMPlexSansArabic',
-            fontSize: 15,
-            color: AppColors.textSecondary,
-            height: 1.8,
-          ),
-        ),
+        _buildContentBody(body),
       ],
     );
+  }
+
+  Widget _buildContentBody(String raw) {
+    if (raw.isEmpty) {
+      return const Text(
+        'لا يوجد محتوى لهذا الإعلان بعد.',
+        style: TextStyle(
+          fontFamily: 'IBMPlexSansArabic',
+          fontSize: 15,
+          color: AppColors.textSecondary,
+          height: 1.8,
+        ),
+      );
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return _QuillContentView(document: quill.Document.fromJson(decoded));
+      }
+    } catch (_) {}
+
+    return Text(
+      _extractPlainContent(raw),
+      style: const TextStyle(
+        fontFamily: 'IBMPlexSansArabic',
+        fontSize: 15,
+        color: AppColors.textSecondary,
+        height: 1.8,
+      ),
+    );
+  }
+
+  String _extractPlainContent(String raw) {
+    if (raw.contains('insert⟨')) {
+      final re = RegExp(r'insert⟨(.*?)⟩', dotAll: true);
+      final matches = re.allMatches(raw);
+      if (matches.isNotEmpty) {
+        return matches.map((m) => m.group(1) ?? '').join().replaceAll('⏎', '\n').trim();
+      }
+    }
+    return raw.trim();
   }
 
   Future<void> _deleteNews(BuildContext context, WidgetRef ref, String newsId) async {
@@ -718,5 +755,53 @@ class NewsDetailScreen extends ConsumerWidget {
       'men_condolence_location': 'ديوان العبدالله - الرميثية قطعة 4',
       'women_condolence_location': 'منزل الفقيد - سلوى قطعة 10',
     };
+  }
+}
+
+class _QuillContentView extends StatefulWidget {
+  final quill.Document document;
+  const _QuillContentView({required this.document});
+
+  @override
+  State<_QuillContentView> createState() => _QuillContentViewState();
+}
+
+class _QuillContentViewState extends State<_QuillContentView> {
+  late final quill.QuillController _controller;
+  final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = quill.QuillController(
+      document: widget.document,
+      selection: const TextSelection.collapsed(offset: 0),
+      readOnly: true,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return quill.QuillEditor.basic(
+      controller: _controller,
+      focusNode: _focusNode,
+      scrollController: _scrollController,
+      config: const quill.QuillEditorConfig(
+        padding: EdgeInsets.zero,
+        expands: false,
+        scrollable: false,
+        showCursor: false,
+        enableInteractiveSelection: true,
+      ),
+    );
   }
 }

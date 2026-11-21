@@ -129,7 +129,6 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
                 const SizedBox(height: 20),
                 if (_selectedTab == 0)
                   _CampaignsSection(
-                    title: 'حملات التبرع',
                     campaigns: _campaigns,
                     emptyMessage: 'لا توجد حملات حالياً',
                   )
@@ -561,11 +560,10 @@ class _FundCard extends StatelessWidget {
 }
 
 class _CampaignsSection extends StatelessWidget {
-  final String title;
   final List<Campaign> campaigns;
   final String emptyMessage;
 
-  const _CampaignsSection({required this.title, required this.campaigns, this.emptyMessage = ''});
+  const _CampaignsSection({required this.campaigns, this.emptyMessage = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -583,8 +581,6 @@ class _CampaignsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeader(title: title),
-          const SizedBox(height: 12),
           if (campaigns.isEmpty)
             _EmptyCard(message: emptyMessage)
           else
@@ -641,8 +637,7 @@ class _AllFundsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeader(title: 'الصناديق'),
-          const SizedBox(height: 12),
+          if (funds.isNotEmpty) const SizedBox(height: 4),
           for (final fund in funds)
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
@@ -735,8 +730,7 @@ class _CampaignCategoriesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionHeader(title: 'تصنيفات الحملات'),
-          const SizedBox(height: 12),
+          const SizedBox(height: 4),
           for (final entry in entries) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 4, 24, 10),
@@ -932,50 +926,65 @@ class _CampaignCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        _MiniStat(label: 'المستهدف', value: '$target ج.س'),
-                        Container(width: 1, height: 28, margin: const EdgeInsets.symmetric(horizontal: 12), color: _kDivider),
-                        _MiniStat(label: 'المُجمَّع', value: '$collected ج.س'),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(999),
+                        Expanded(
+                          child: _MiniStat(
+                            label: 'المبلغ المجموع',
+                            value: '${_compactAmount(campaign.collectedAmount)} ج.س',
+                            crossAxisAlignment: CrossAxisAlignment.start,
                           ),
-                          child: Text(
-                            '${_toArabicDigits('$percent')}٪',
-                            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary),
+                        ),
+                        Container(width: 1, height: 32, color: _kDivider),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _MiniStat(
+                            label: 'المبلغ المستهدف',
+                            value: '${_compactAmount(campaign.targetAmount)} ج.س',
+                            crossAxisAlignment: CrossAxisAlignment.start,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: campaign.progress.clamp(0.0, 1.0)),
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, value, _) => LinearProgressIndicator(
-                          value: value,
-                          minHeight: 8,
-                          backgroundColor: _kSoftBg,
-                          color: isActive ? AppColors.primary : const Color(0xFF64748B),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            isActive ? 'ساهم الآن وكن جزءًا من الأثر' : 'اكتملت الحملة — يمكنك عرض التفاصيل',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: _kMuted),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0, end: campaign.progress.clamp(0.0, 1.0)),
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, value, _) {
+                                final pctText = '${_toArabicDigits('$percent')}٪';
+                                return Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    SizedBox(
+                                      height: 20,
+                                      width: double.infinity,
+                                      child: LinearProgressIndicator(
+                                        value: value,
+                                        backgroundColor: _kSoftBg,
+                                        color: isActive ? AppColors.primary : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                    Text(
+                                      pctText,
+                                      style: TextStyle(
+                                        fontFamily: 'IBMPlexSansArabic',
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: value >= 0.5 ? Colors.white : _kNameColor,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -985,8 +994,8 @@ class _CampaignCard extends StatelessWidget {
                             backgroundColor: isActive ? AppColors.primary : const Color(0xFFE2E8F0),
                             foregroundColor: isActive ? Colors.white : _kNameColor,
                             elevation: 0,
-                            minimumSize: const Size(0, 38),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            minimumSize: const Size(96, 38),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             textStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w700),
                           ),
@@ -1051,12 +1060,13 @@ class _StatusBadge extends StatelessWidget {
 class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
-  const _MiniStat({required this.label, required this.value});
+  final CrossAxisAlignment crossAxisAlignment;
+  const _MiniStat({required this.label, required this.value, this.crossAxisAlignment = CrossAxisAlignment.start});
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: crossAxisAlignment,
       children: [
         Text(label, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kMuted)),
         const SizedBox(height: 2),
@@ -1191,6 +1201,26 @@ class _DonationsSkeleton extends StatelessWidget {
       ],
     );
   }
+}
+
+String _compactAmount(num value) {
+  final abs = value.abs();
+  if (abs >= 1000000000) {
+    final n = value / 1000000000;
+    final s = n == n.roundToDouble() ? n.toInt().toString() : n.toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
+    return '${_toArabicDigits(s)} مليار';
+  }
+  if (abs >= 1000000) {
+    final n = value / 1000000;
+    final s = n == n.roundToDouble() ? n.toInt().toString() : n.toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
+    return '${_toArabicDigits(s)} مليون';
+  }
+  if (abs >= 1000) {
+    final n = value / 1000;
+    final s = n == n.roundToDouble() ? n.toInt().toString() : n.toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
+    return '${_toArabicDigits(s)} ألف';
+  }
+  return _toArabicDigits(NumberFormat('#,##0').format(value));
 }
 
 String _toArabicDigits(String input) {

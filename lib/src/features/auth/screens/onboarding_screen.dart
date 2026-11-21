@@ -183,24 +183,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         children: [
           SvgPicture.asset(
             'assets/logo/tawati-primary-white.svg',
-            height: 40,
+            height: 34,
             fit: BoxFit.contain,
           ),
           const Spacer(),
-          if (_isLast)
-            const SizedBox(width: 40)
-          else
-            TextButton(
-              onPressed: _finish,
-              style: TextButton.styleFrom(
-                foregroundColor: _kSlate400,
-                padding: const EdgeInsets.symmetric(vertical: 4),
-              ),
-              child: const Text(
-                'تخطي',
-                style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-            ),
         ],
       ),
     );

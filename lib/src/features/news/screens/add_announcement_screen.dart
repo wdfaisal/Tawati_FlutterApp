@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -64,11 +65,27 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
       _titleCtrl.text = data['title'] as String? ?? '';
       final content = data['content'] as String? ?? data['body'] as String? ?? '';
       if (content.isNotEmpty) {
-        final doc = Document()..insert(0, content);
-        _quillCtrl = QuillController(
-          document: doc,
-          selection: TextSelection.collapsed(offset: content.length),
-        );
+        try {
+          final decoded = jsonDecode(content);
+          if (decoded is List) {
+            _quillCtrl = QuillController(
+              document: Document.fromJson(decoded),
+              selection: const TextSelection.collapsed(offset: 0),
+            );
+          } else {
+            _quillCtrl = QuillController(
+              document: Document()..insert(0, content),
+              selection: TextSelection.collapsed(offset: content.length),
+            );
+          }
+        } catch (_) {
+          // Legacy/plain text or corrupted delta-string format
+          final plain = _extractPlainText(content);
+          _quillCtrl = QuillController(
+            document: Document()..insert(0, plain),
+            selection: TextSelection.collapsed(offset: plain.length),
+          );
+        }
       } else {
         _quillCtrl = QuillController.basic();
       }
@@ -136,14 +153,14 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final delta = _quillCtrl.document.toDelta();
-    final plainText = delta.toString().trim();
+    final plainText = _quillCtrl.document.toPlainText().trim();
     if (plainText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('يرجى كتابة وصف الإعلان')),
       );
       return;
     }
+    final contentJson = jsonEncode(_quillCtrl.document.toDelta().toJson());
 
     setState(() => _submitting = true);
     try {
@@ -155,7 +172,7 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
       }
       final body = <String, dynamic>{
         'title': _titleCtrl.text.trim(),
-        'content': plainText,
+        'content': contentJson,
         'type': _category?.type ?? 'general',
         if (_category?.subType != null) 'sub_type': _category!.subType,
         if (imageUrl != null) 'image': imageUrl,
@@ -193,6 +210,17 @@ class _AddAnnouncementScreenState extends ConsumerState<AddAnnouncementScreen> {
     final d = _date;
     if (d == null) return 'mm/dd/yyyy';
     return '${d.day}/${d.month}/${d.year}';
+  }
+
+  String _extractPlainText(String raw) {
+    if (raw.contains('insert⟨')) {
+      final re = RegExp(r'insert⟨(.*?)⟩', dotAll: true);
+      final matches = re.allMatches(raw);
+      if (matches.isNotEmpty) {
+        return matches.map((m) => m.group(1) ?? '').join().replaceAll('⏎', '\n').trim();
+      }
+    }
+    return raw.trim();
   }
 
   @override

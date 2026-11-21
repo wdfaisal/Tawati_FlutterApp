@@ -14,6 +14,7 @@ import 'src/core/guest_mode.dart';
 import 'src/core/theme/app_theme.dart';
 import 'src/core/theme/theme_controller.dart';
 import 'src/core/providers.dart';
+import 'src/core/widgets/animated_launch_screen.dart';
 import 'src/features/auth/providers/auth_provider.dart';
 
 void main() async {
@@ -107,6 +108,9 @@ class TawatiApp extends ConsumerStatefulWidget {
 }
 
 class _TawatiAppState extends ConsumerState<TawatiApp> {
+  bool _splashDone = false;
+  bool _initialLoadDone = false;
+
   @override
   void initState() {
     super.initState();
@@ -128,6 +132,7 @@ class _TawatiAppState extends ConsumerState<TawatiApp> {
         Stripe.publishableKey = pk;
       }
     }
+    if (mounted) setState(() => _initialLoadDone = true);
   }
 
   @override
@@ -163,6 +168,21 @@ class _TawatiAppState extends ConsumerState<TawatiApp> {
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: themeMode,
+      builder: (context, child) {
+        if (_splashDone) return child ?? const SizedBox.shrink();
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            child ?? const SizedBox.shrink(),
+            AnimatedLaunchScreen(
+              ready: _initialLoadDone,
+              onFinished: () {
+                if (mounted) setState(() => _splashDone = true);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
