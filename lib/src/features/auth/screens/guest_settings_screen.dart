@@ -4,9 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:tawati_mobile/src/core/legal.dart';
-import 'package:tawati_mobile/src/core/theme/app_theme.dart';
 import 'package:tawati_mobile/src/core/theme/theme_controller.dart';
 import 'package:tawati_mobile/src/features/auth/screens/login_sheet.dart';
+
+const _kPrimary = Color(0xFF044465);
+const _kMuted = Color(0xFF9CAFB8);
+const _kSecondary = Color(0xFF62707B);
+const _kSurface = Color(0xFFF1F5F8);
+const _kDark = Color(0xFF1A242B);
 
 class GuestSettingsScreen extends ConsumerWidget {
   const GuestSettingsScreen({super.key});
@@ -14,122 +19,225 @@ class GuestSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          centerTitle: true,
-          title: const Text(
-            'الإعدادات',
-            style: TextStyle(
-              fontFamily: 'IBMPlexSansArabic',
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-          children: [
-            _LoginHeroCard(
-              onLogin: () => showLoginSheet(context),
-            ),
-            const SizedBox(height: 20),
-            const _SectionTitle(title: 'عام'),
-            const SizedBox(height: 8),
-            _SettingsCard(
-              children: [
-                _SettingsTile(
-                  icon: Icons.palette_outlined,
-                  iconColor: AppColors.primary,
-                  title: 'مظهر التطبيق',
-                  subtitle: ThemeModeStorage.label(themeMode),
-                  onTap: () => _showThemePicker(context, ref, themeMode),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const _SectionTitle(title: 'حول المنصة والمستندات'),
-            const SizedBox(height: 8),
-            _SettingsCard(
-              children: [
-                _SettingsTile(
-                  icon: Icons.info_outline_rounded,
-                  iconColor: const Color(0xFF0D9488),
-                  title: 'حول منصة تواتي',
-                  subtitle: 'تعريف بالمنصة وخدماتها',
-                  onTap: () => _showAboutSheet(context),
-                ),
-                _divider(isDark),
-                _SettingsTile(
-                  icon: Icons.privacy_tip_outlined,
-                  iconColor: const Color(0xFF2563EB),
-                  title: 'سياسة الخصوصية',
-                  subtitle: 'وثائق الخصوصية لتواتي ولجان الإحسان والشكاوى',
-                  onTap: () => context.push('/privacy-policy'),
-                ),
-                _divider(isDark),
-                _SettingsTile(
-                  icon: Icons.description_outlined,
-                  iconColor: const Color(0xFF7C3AED),
-                  title: 'الشروط والأحكام',
-                  subtitle: 'شروط استخدام منصة تواتي',
-                  onTap: () => context.push('/terms'),
-                ),
-                _divider(isDark),
-                _SettingsTile(
-                  icon: Icons.support_agent_outlined,
-                  iconColor: const Color(0xFFEA580C),
-                  title: 'الشكاوى والاقتراحات',
-                  subtitle: 'التواصل مع لجان الإحسان والشكاوى والدعم',
-                  onTap: () => _contactSupport(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? scheme.surfaceContainerHighest.withValues(alpha: 0.35)
-                    : AppColors.primaryLight.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isDark ? Colors.white12 : AppColors.primary.withValues(alpha: 0.12),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.lock_outline_rounded, size: 20, color: scheme.primary),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'أنت في وضع الزائر. سجّل الدخول للوصول إلى الهوية الرقمية، شجرة العائلة، المجموعات، وبقية خدمات الأعضاء.',
-                      style: TextStyle(
-                        fontFamily: 'IBMPlexSansArabic',
-                        fontSize: 12.5,
-                        height: 1.7,
-                        color: scheme.onSurface.withValues(alpha: 0.85),
-                      ),
-                    ),
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.only(bottom: 32),
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 28),
+              _buildMenuList(context, ref, themeMode),
+              const SizedBox(height: 16),
+              const Center(
+                child: Text(
+                  'الإصدار 1.0.0',
+                  style: TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 12,
+                    color: _kMuted,
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  static Widget _divider(bool isDark) => Divider(
-        height: 1,
-        indent: 56,
-        color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-      );
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          const SizedBox(height: 36),
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: _kSurface, width: 4),
+              color: _kSurface,
+            ),
+            child: const Center(
+              child: Icon(Icons.person_outline_rounded, size: 46, color: _kPrimary),
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'الإعدادات',
+            style: TextStyle(
+              fontFamily: 'IBMPlexSansArabic',
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: _kPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'أنت في وضع الزائر',
+            style: TextStyle(
+              fontFamily: 'IBMPlexSansArabic',
+              fontSize: 14,
+              color: _kMuted,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(color: _kSurface, borderRadius: BorderRadius.circular(20)),
+            child: const Text(
+              'زائر',
+              style: TextStyle(
+                fontFamily: 'IBMPlexSansArabic',
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: _kSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () => showLoginSheet(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(50),
+                border: Border.all(color: _kSurface, width: 1.5),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.login_rounded, size: 16, color: _kPrimary),
+                  SizedBox(width: 6),
+                  Text(
+                    'تسجيل الدخول',
+                    style: TextStyle(
+                      fontFamily: 'IBMPlexSansArabic',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: _kPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuList(BuildContext context, WidgetRef ref, ThemeMode themeMode) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          _buildMenuTile(
+            icon: ThemeModeStorage.icon(themeMode),
+            title: 'مظهر التطبيق',
+            subtitle: ThemeModeStorage.label(themeMode),
+            onTap: () => _showThemePicker(context, ref, themeMode),
+          ),
+          _buildMenuTile(
+            icon: Icons.family_restroom_rounded,
+            title: 'حول منصة تواتي',
+            onTap: () => _showAboutSheet(context),
+          ),
+          _buildMenuTile(
+            icon: Icons.privacy_tip_outlined,
+            title: 'سياسة الخصوصية',
+            onTap: () => context.push('/privacy-policy'),
+          ),
+          _buildMenuTile(
+            icon: Icons.description_outlined,
+            title: 'الشروط والأحكام',
+            onTap: () => context.push('/terms'),
+          ),
+          _buildMenuTile(
+            icon: Icons.support_agent_outlined,
+            title: 'الشكاوى والاقتراحات',
+            onTap: () => _contactSupport(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kSurface, width: 1),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _kSurface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 20, color: _kPrimary),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'IBMPlexSansArabic',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: _kDark,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 12,
+                        color: _kMuted,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_left, size: 22, color: _kMuted),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _showThemePicker(
     BuildContext context,
@@ -138,16 +246,16 @@ class GuestSettingsScreen extends ConsumerWidget {
   ) async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,30 +270,18 @@ class GuestSettingsScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   const Text(
                     'مظهر التطبيق',
                     style: TextStyle(
                       fontFamily: 'IBMPlexSansArabic',
-                      fontSize: 18,
+                      fontSize: 17,
                       fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'اختر المظهر المناسب لك',
-                    style: TextStyle(
-                      fontFamily: 'IBMPlexSansArabic',
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
+                      color: _kPrimary,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  for (final mode in const [
-                    ThemeMode.light,
-                    ThemeMode.dark,
-                    ThemeMode.system,
-                  ])
+                  for (final mode in const [ThemeMode.light, ThemeMode.dark, ThemeMode.system])
                     _ThemeOptionTile(
                       mode: mode,
                       selected: current == mode,
@@ -207,12 +303,11 @@ class GuestSettingsScreen extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        final scheme = Theme.of(ctx).colorScheme;
         return Directionality(
           textDirection: TextDirection.rtl,
           child: DraggableScrollableSheet(
@@ -223,7 +318,7 @@ class GuestSettingsScreen extends ConsumerWidget {
             builder: (context, scrollController) {
               return SingleChildScrollView(
                 controller: scrollController,
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -244,10 +339,10 @@ class GuestSettingsScreen extends ConsumerWidget {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: scheme.primary.withValues(alpha: 0.12),
+                            color: _kSurface,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.family_restroom_rounded, color: scheme.primary),
+                          child: const Icon(Icons.family_restroom_rounded, color: _kPrimary),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(
@@ -257,6 +352,7 @@ class GuestSettingsScreen extends ConsumerWidget {
                               fontFamily: 'IBMPlexSansArabic',
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
+                              color: _kPrimary,
                             ),
                           ),
                         ),
@@ -278,9 +374,9 @@ class GuestSettingsScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: scheme.primary.withValues(alpha: 0.08),
+                        color: _kSurface,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: scheme.primary.withValues(alpha: 0.15)),
+                        border: Border.all(color: _kSurface),
                       ),
                       child: const Text(
                         'تواتي — لجان الإحسان والشكاوى',
@@ -288,6 +384,7 @@ class GuestSettingsScreen extends ConsumerWidget {
                           fontFamily: 'IBMPlexSansArabic',
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
+                          color: _kDark,
                         ),
                       ),
                     ),
@@ -318,207 +415,6 @@ class GuestSettingsScreen extends ConsumerWidget {
   }
 }
 
-class _LoginHeroCard extends StatelessWidget {
-  final VoidCallback onLogin;
-  const _LoginHeroCard({required this.onLogin});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [AppColors.primary, Color(0xFF0F766E)],
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -24,
-            right: -24,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -20,
-            left: -20,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-          const Row(
-            children: [
-              Icon(Icons.settings_suggest_rounded, color: Colors.white, size: 22),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'الإعدادات العامة للتطبيق',
-                  style: TextStyle(
-                    fontFamily: 'IBMPlexSansArabic',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'خصّص مظهر التطبيق واطّلع على معلومات المنصة ومستندات الخصوصية. سجّل الدخول للوصول إلى حسابك وخدمات الأعضاء.',
-            style: TextStyle(
-              fontFamily: 'IBMPlexSansArabic',
-              fontSize: 12.5,
-              height: 1.7,
-              color: Colors.white70,
-            ),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: ElevatedButton.icon(
-              onPressed: onLogin,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.primary,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                textStyle: const TextStyle(
-                  fontFamily: 'IBMPlexSansArabic',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              icon: const Icon(Icons.login_rounded, size: 20),
-              label: const Text('تسجيل الدخول للمنصة'),
-            ),
-          ),
-        ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  const _SectionTitle({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontFamily: 'IBMPlexSansArabic',
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textSecondary,
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsCard extends StatelessWidget {
-  final List<Widget> children;
-  const _SettingsCard({required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Theme.of(context).cardTheme.color : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
-      ),
-      child: Column(children: children),
-    );
-  }
-}
-
-class _SettingsTile extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _SettingsTile({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-      leading: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: iconColor.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: iconColor, size: 20),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontFamily: 'IBMPlexSansArabic',
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontFamily: 'IBMPlexSansArabic',
-          fontSize: 12,
-          height: 1.4,
-          color: scheme.onSurface.withValues(alpha: 0.65),
-        ),
-      ),
-      trailing: Icon(Icons.chevron_left_rounded, color: scheme.onSurface.withValues(alpha: 0.4)),
-    );
-  }
-}
-
 class _ThemeOptionTile extends StatelessWidget {
   final ThemeMode mode;
   final bool selected;
@@ -532,41 +428,27 @@ class _ThemeOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: onTap,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: selected ? _kPrimary.withValues(alpha: 0.06) : _kSurface,
         borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? scheme.primary : Colors.grey.withValues(alpha: 0.25),
-              width: selected ? 1.5 : 1,
-            ),
-            color: selected ? scheme.primary.withValues(alpha: 0.08) : null,
-          ),
-          child: Row(
-            children: [
-              Icon(ThemeModeStorage.icon(mode), color: selected ? scheme.primary : null),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  ThemeModeStorage.label(mode),
-                  style: TextStyle(
-                    fontFamily: 'IBMPlexSansArabic',
-                    fontSize: 14,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-              ),
-              if (selected)
-                Icon(Icons.check_circle_rounded, color: scheme.primary, size: 20),
-            ],
+        border: Border.all(color: selected ? _kPrimary.withValues(alpha: 0.3) : _kSurface),
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        leading: Icon(ThemeModeStorage.icon(mode), color: selected ? _kPrimary : _kSecondary),
+        title: Text(
+          ThemeModeStorage.label(mode),
+          style: TextStyle(
+            fontFamily: 'IBMPlexSansArabic',
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            color: selected ? _kPrimary : _kDark,
           ),
         ),
+        trailing: selected ? const Icon(Icons.check_circle_rounded, color: _kPrimary, size: 20) : null,
+        onTap: onTap,
       ),
     );
   }
@@ -580,11 +462,11 @@ class _AboutParagraph extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: TextStyle(
+      style: const TextStyle(
         fontFamily: 'IBMPlexSansArabic',
         fontSize: 13.5,
         height: 1.8,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+        color: _kSecondary,
       ),
     );
   }

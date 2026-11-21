@@ -36,6 +36,7 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
   List<Fund> _funds = [];
   bool _loading = true;
   String? _error;
+  int _selectedTab = 0;
 
   @override
   void initState() {
@@ -121,17 +122,21 @@ class _DonationsTabState extends ConsumerState<DonationsTab> {
                 const _EmptyState()
               else ...[
                 const SizedBox(height: 16),
-                if (_campaigns.isNotEmpty) _ImpactBanner(campaigns: _campaigns),
-                _FundsSection(
-                  funds: _funds.where((f) => f.isPermanent).toList(),
-                  title: '\u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 \u0627\u0644\u062F\u0627\u0626\u0645\u0629',
-                  onOpenAll: () => context.push('/funds'),
+                _DonationsTabSwitcher(
+                  selectedIndex: _selectedTab,
+                  onChanged: (i) => setState(() => _selectedTab = i),
                 ),
-                _CampaignsSection(
-                  title: '\u062D\u0645\u0644\u0627\u062A \u0627\u0644\u062A\u0628\u0631\u0639',
-                  campaigns: _campaigns,
-                  emptyMessage: '\u0644\u0627 \u062A\u0648\u062C\u062F \u062D\u0645\u0644\u0627\u062A \u062D\u0627\u0644\u064A\u0627\u064B',
-                ),
+                const SizedBox(height: 20),
+                if (_selectedTab == 0)
+                  _CampaignsSection(
+                    title: 'حملات التبرع',
+                    campaigns: _campaigns,
+                    emptyMessage: 'لا توجد حملات حالياً',
+                  )
+                else if (_selectedTab == 1)
+                  _AllFundsSection(funds: _funds)
+                else
+                  _CampaignCategoriesSection(campaigns: _campaigns),
               ],
               const SizedBox(height: 28),
             ],
@@ -313,109 +318,47 @@ class _NotificationsButton extends StatelessWidget {
   }
 }
 
-class _ImpactBanner extends StatelessWidget {
-  final List<Campaign> campaigns;
+class _DonationsTabSwitcher extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onChanged;
 
-  const _ImpactBanner({required this.campaigns});
+  const _DonationsTabSwitcher({required this.selectedIndex, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    final fmt = NumberFormat('#,##0');
-    final totalRaised = campaigns.fold<double>(0, (sum, c) => sum + c.collectedAmount);
-    final activeCount = campaigns.where((c) => c.isActive).length;
-    final fundCount = campaigns
-        .map((c) => c.fundId)
-        .where((id) => id.isNotEmpty)
-        .toSet()
-        .length;
-
+    const tabs = ['حملات التبرع', 'الصناديق', 'تصنيفات الحملات'];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, Color(0xFF0F766E)],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-          ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 16, offset: const Offset(0, 6)),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(14)),
-                  child: const Icon(Icons.volunteer_activism_outlined, color: Colors.white, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'إجمالي التبرعات',
-                        style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Colors.white70),
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            _toArabicDigits(fmt.format(totalRaised)),
-                            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                          const SizedBox(width: 5),
-                          const Text(
-                            'ج.س',
-                            style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Colors.white70),
-                          ),
-                        ],
-                      ),
-                    ],
+      child: Row(
+        children: List.generate(tabs.length, (i) {
+          final active = i == selectedIndex;
+          return Expanded(
+            child: InkWell(
+              onTap: () => onChanged(i),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: active ? AppColors.primary : Colors.transparent, width: 2),
                   ),
                 ),
-              ],
+                child: Text(
+                  tabs[i],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 14,
+                    height: 1.25,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                    color: active ? AppColors.primary : _kMuted,
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
-            Container(height: 1, color: Colors.white.withValues(alpha: 0.2)),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(child: _ImpactStat(label: 'مبادرات نشطة', value: _toArabicDigits('$activeCount'))),
-                Expanded(child: _ImpactStat(label: 'صناديق دعم', value: _toArabicDigits('$fundCount'))),
-              ],
-            ),
-          ],
-        ),
+          );
+        }),
       ),
-    );
-  }
-}
-
-class _ImpactStat extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _ImpactStat({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: Colors.white70)),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-      ],
     );
   }
 }
@@ -627,8 +570,16 @@ class _CampaignsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (campaigns.isEmpty && emptyMessage.isEmpty) return const SizedBox.shrink();
+
+    final grouped = <String, List<Campaign>>{};
+    for (final c in campaigns) {
+      final key = (c.fundName != null && c.fundName!.trim().isNotEmpty) ? c.fundName!.trim() : 'أخرى';
+      grouped.putIfAbsent(key, () => []).add(c);
+    }
+    final entries = grouped.entries.toList();
+
     return Padding(
-      padding: const EdgeInsets.only(top: 28),
+      padding: const EdgeInsets.only(top: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -637,11 +588,190 @@ class _CampaignsSection extends StatelessWidget {
           if (campaigns.isEmpty)
             _EmptyCard(message: emptyMessage)
           else
-            for (final c in campaigns)
+            for (final entry in entries) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 4, 24, 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 18,
+                      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        entry.key,
+                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w700, color: _kNameColor),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: _kSoftBg, borderRadius: BorderRadius.circular(999)),
+                      child: Text(
+                        _toArabicDigits('${entry.value.length}'),
+                        style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, fontWeight: FontWeight.w600, color: _kSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              for (final c in entry.value)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                  child: _CampaignCard(campaign: c),
+                ),
+              const SizedBox(height: 4),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AllFundsSection extends StatelessWidget {
+  final List<Fund> funds;
+  const _AllFundsSection({required this.funds});
+
+  @override
+  Widget build(BuildContext context) {
+    if (funds.isEmpty) return const _EmptyCard(message: 'لا توجد صناديق حالياً');
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeader(title: 'الصناديق'),
+          const SizedBox(height: 12),
+          for (final fund in funds)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+              child: _FundListCard(fund: fund),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FundListCard extends StatelessWidget {
+  final Fund fund;
+  const _FundListCard({required this.fund});
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = NumberFormat('#,##0');
+    final balanceText = _toArabicDigits(fmt.format(fund.balance));
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kDivider),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.account_balance_wallet_outlined, size: 22, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fund.nameAr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: _kNameColor),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  fund.typeLabel,
+                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: _kMuted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$balanceText ج.س',
+                style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
+              ),
+              const SizedBox(height: 2),
+              const Text('الرصيد', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 10, color: _kMuted)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CampaignCategoriesSection extends StatelessWidget {
+  final List<Campaign> campaigns;
+  const _CampaignCategoriesSection({required this.campaigns});
+
+  @override
+  Widget build(BuildContext context) {
+    if (campaigns.isEmpty) return const _EmptyCard(message: 'لا توجد حملات حالياً');
+
+    final grouped = <String, List<Campaign>>{};
+    for (final c in campaigns) {
+      final key = (c.fundName != null && c.fundName!.trim().isNotEmpty) ? c.fundName!.trim() : 'أخرى';
+      grouped.putIfAbsent(key, () => []).add(c);
+    }
+    final entries = grouped.entries.toList();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeader(title: 'تصنيفات الحملات'),
+          const SizedBox(height: 12),
+          for (final entry in entries) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 4, 24, 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 18,
+                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      entry.key,
+                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, fontWeight: FontWeight.w700, color: _kNameColor),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: _kSoftBg, borderRadius: BorderRadius.circular(999)),
+                    child: Text(
+                      _toArabicDigits('${entry.value.length}'),
+                      style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, fontWeight: FontWeight.w600, color: _kSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            for (final c in entry.value)
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
                 child: _CampaignCard(campaign: c),
               ),
+            const SizedBox(height: 4),
+          ],
         ],
       ),
     );
@@ -1051,7 +1181,7 @@ class _DonationsSkeleton extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: skeletonBox(height: 132, borderRadius: 18),
+          child: skeletonBox(height: 48, borderRadius: 14),
         ),
         for (var i = 0; i < 2; i++)
           Padding(

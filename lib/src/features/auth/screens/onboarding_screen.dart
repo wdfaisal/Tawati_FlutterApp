@@ -182,8 +182,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       child: Row(
         children: [
           SvgPicture.asset(
-            'assets/logo/tawati-primary.svg',
-            height: 48,
+            'assets/logo/tawati-primary-white.svg',
+            height: 40,
             fit: BoxFit.contain,
           ),
           const Spacer(),

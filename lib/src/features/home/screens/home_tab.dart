@@ -84,7 +84,7 @@ class HomeTab extends ConsumerWidget {
                 onNotifications: () => guard(() => context.push('/notifications')),
                 unreadCount: unreadCount,
               ),
-              const _Greeting(),
+              if (!isGuest) const _Greeting(),
               const _DocumentationBanner(),
               if (isGuest)
                 const _GuestPromoSlider()
@@ -95,13 +95,13 @@ class HomeTab extends ConsumerWidget {
                   onOpenChats: () => guard(onOpenGroups ?? () {}),
                   onDonate: onOpenDonations ?? () {},
                 ),
-              _PermanentFundsSection(
-                fundsAsync: fundsAsync,
-                onOpenAll: () => context.push('/funds'),
-              ),
               _AnnouncementsSection(
                 newsAsync: newsAsync,
                 onOpenAll: () => context.push('/news'),
+              ),
+              _PermanentFundsSection(
+                fundsAsync: fundsAsync,
+                onOpenAll: () => context.push('/funds'),
               ),
               _EventsSection(
                 initiativesAsync: initiativesAsync,
@@ -353,8 +353,14 @@ class _GuestPromoSlider extends StatefulWidget {
 }
 
 class _GuestPromoSliderState extends State<_GuestPromoSlider> {
-  final _controller = PageController(viewportFraction: 0.92);
-  int _index = 0;
+  late final PageController _controller;
+  int _index = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController(viewportFraction: 0.92, initialPage: _index);
+  }
 
   static const _slides = [
     _PromoSlideData(
@@ -368,6 +374,7 @@ class _GuestPromoSliderState extends State<_GuestPromoSlider> {
       subtitle: 'اطّلع على حملات التبرع وصناديق الدعم وساهم في إحداث أثر.',
       icon: Icons.volunteer_activism_rounded,
       colors: [Color(0xFF0A6FA8), AppColors.primary],
+      backgroundImage: 'assets/images/Community Support by the Riverside.png',
     ),
     _PromoSlideData(
       title: 'ابقَ على اطلاع',
@@ -429,11 +436,13 @@ class _PromoSlideData {
   final String subtitle;
   final IconData icon;
   final List<Color> colors;
+  final String? backgroundImage;
   const _PromoSlideData({
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.colors,
+    this.backgroundImage,
   });
 }
 
@@ -443,6 +452,98 @@ class _PromoSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final content = Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                data.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                data.subtitle,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 12.5,
+                  color: Colors.white.withValues(alpha: 0.9),
+                  height: 1.6,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Icon(data.icon, color: Colors.white, size: 32),
+        ),
+      ],
+    );
+
+    final decoration = BoxDecoration(
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: data.colors.first.withValues(alpha: 0.22),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    );
+
+    if (data.backgroundImage != null) {
+      return Container(
+        decoration: decoration,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                data.backgroundImage!,
+                fit: BoxFit.cover,
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.20),
+                      Colors.black.withValues(alpha: 0.45),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: content,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -452,60 +553,9 @@ class _PromoSlide extends StatelessWidget {
           colors: data.colors,
         ),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: data.colors.first.withValues(alpha: 0.22),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: decoration.boxShadow,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  data.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'IBMPlexSansArabic',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  data.subtitle,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'IBMPlexSansArabic',
-                    fontSize: 12.5,
-                    color: Colors.white.withValues(alpha: 0.9),
-                    height: 1.6,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(data.icon, color: Colors.white, size: 32),
-          ),
-        ],
-      ),
+      child: content,
     );
   }
 }
