@@ -34,7 +34,7 @@ class DonationService {
     String? receiptImage,
     bool isAnonymous = false,
   }) async {
-    final response = await _api.post('/donations/manual', data: {
+    final response = await _api.post('/donations/manual', allowGuest: true, data: {
       'campaign_id': campaignId,
       'amount': amount,
       'payment_method_id': paymentMethodId,
@@ -47,13 +47,16 @@ class DonationService {
   }
 
   Future<String> uploadReceipt({
-    required String filePath,
+    String? filePath,
+    List<int>? bytes,
     String? filename,
   }) async {
     return _api.uploadImage(
       path: '/donations/upload-receipt',
       filePath: filePath,
+      bytes: bytes,
       filename: filename,
+      allowGuest: true,
     );
   }
 

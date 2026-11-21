@@ -783,6 +783,8 @@ class _CampaignCard extends StatelessWidget {
     final fmt = NumberFormat('#,##0');
     final hasImage = campaign.image != null && campaign.image!.isNotEmpty;
     final isActive = campaign.isActive;
+    final canDonate = campaign.canDonate;
+    final isGoalReached = campaign.isGoalReached;
     final collected = _toArabicDigits(fmt.format(campaign.collectedAmount));
     final target = _toArabicDigits(fmt.format(campaign.targetAmount));
     final daysLeft = _daysLeftLabel(campaign.endDate);
@@ -838,7 +840,7 @@ class _CampaignCard extends StatelessWidget {
                       Positioned(
                         top: 12,
                         right: 12,
-                        child: _StatusBadge(isActive: isActive),
+                        child: _StatusBadge(isActive: isActive, isGoalReached: isGoalReached),
                       ),
                       if (daysLeft != null)
                         Positioned(
@@ -968,7 +970,7 @@ class _CampaignCard extends StatelessWidget {
                                       child: LinearProgressIndicator(
                                         value: value,
                                         backgroundColor: _kSoftBg,
-                                        color: isActive ? AppColors.primary : const Color(0xFF64748B),
+                                        color: canDonate ? AppColors.primary : const Color(0xFF64748B),
                                       ),
                                     ),
                                     Text(
@@ -991,15 +993,15 @@ class _CampaignCard extends StatelessWidget {
                         ElevatedButton(
                           onPressed: () => context.push('/campaign/${campaign.id}'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isActive ? AppColors.primary : const Color(0xFFE2E8F0),
-                            foregroundColor: isActive ? Colors.white : _kNameColor,
+                            backgroundColor: canDonate ? AppColors.primary : const Color(0xFFE2E8F0),
+                            foregroundColor: canDonate ? Colors.white : _kNameColor,
                             elevation: 0,
                             minimumSize: const Size(96, 38),
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             textStyle: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, fontWeight: FontWeight.w700),
                           ),
-                          child: Text(isActive ? 'تبرع الآن' : 'عرض التفاصيل'),
+                          child: Text(canDonate ? 'تبرع الآن' : 'عرض التفاصيل'),
                         ),
                       ],
                     ),
@@ -1030,12 +1032,27 @@ class _CampaignCard extends StatelessWidget {
 
 class _StatusBadge extends StatelessWidget {
   final bool isActive;
-  const _StatusBadge({required this.isActive});
+  final bool isGoalReached;
+  const _StatusBadge({required this.isActive, this.isGoalReached = false});
 
   @override
   Widget build(BuildContext context) {
-    final bg = isActive ? const Color(0xFF16A34A) : const Color(0xFF64748B);
-    final label = isActive ? 'نشطة' : 'مكتملة';
+    final Color bg;
+    final String label;
+    final IconData icon;
+    if (isGoalReached) {
+      bg = const Color(0xFF0D9488);
+      label = 'اكتمل الهدف';
+      icon = Icons.check_circle_rounded;
+    } else if (isActive) {
+      bg = const Color(0xFF16A34A);
+      label = 'نشطة';
+      icon = Icons.bolt_rounded;
+    } else {
+      bg = const Color(0xFF64748B);
+      label = 'مكتملة';
+      icon = Icons.check_circle_rounded;
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -1045,7 +1062,7 @@ class _StatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(isActive ? Icons.bolt_rounded : Icons.check_circle_rounded, size: 14, color: Colors.white),
+          Icon(icon, size: 14, color: Colors.white),
           const SizedBox(width: 4),
           Text(
             label,

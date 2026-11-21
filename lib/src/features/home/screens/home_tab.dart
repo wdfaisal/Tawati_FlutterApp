@@ -115,17 +115,23 @@ class HomeTab extends ConsumerWidget {
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => guard(
-            () => _showQuickActionsSheet(context, onOpenGroups, onOpenDonations),
-          ),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 6,
-          highlightElevation: 0,
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add_rounded, size: 26),
-        ),
+        floatingActionButton: isGuest
+            ? null
+            : FloatingActionButton(
+                onPressed: () => guard(
+                  () => _showQuickActionsSheet(
+                    context,
+                    onOpenGroups,
+                    onOpenDonations,
+                  ),
+                ),
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 6,
+                highlightElevation: 0,
+                shape: const CircleBorder(),
+                child: const Icon(Icons.add_rounded, size: 26),
+              ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );

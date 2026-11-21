@@ -1,5 +1,5 @@
-﻿import 'dart:io';
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -107,7 +107,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
             : _error != null
                 ? _buildError()
                 : _buildContent(),
-        bottomNavigationBar: _campaign != null && _campaign!.isActive
+        bottomNavigationBar: _campaign != null && _campaign!.canDonate
             ? _buildBottomCta()
             : null,
       ),
@@ -679,6 +679,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
 
   String _daysLeftLabel(Campaign campaign) {
     final end = campaign.endDate;
+    if (campaign.isGoalReached) return 'اكتمل الهدف';
     if (!campaign.isActive || end == null) return 'منتهية';
     final days = end.difference(DateTime.now()).inDays;
     if (days < 0) return 'منتهية';
@@ -769,11 +770,21 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
   }
 
   Future<void> _showDonateDialog({double? initialAmount}) async {
-    if (ref.read(authProvider).isVisitor) {
-      await showGuestLoginPrompt(
-        context,
-        message: 'التبرع متاح للأعضاء فقط. سجّل الدخول لإتمام تبرعك بأمان.',
-      );
+    final campaign = _campaign;
+    if (campaign == null || !campaign.canDonate) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              campaign?.isGoalReached == true
+                  ? 'لا يمكن التبرع لهذه الحملة لأنها حققت هدفها'
+                  : 'هذه الحملة غير متاحة للتبرع حالياً',
+              style: const TextStyle(fontFamily: 'IBMPlexSansArabic'),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
       return;
     }
     final result = await showModalBottomSheet<Map<String, dynamic>>(
@@ -788,6 +799,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
       builder: (context) => DonationBottomSheet(
         campaign: _campaign!,
         initialAmount: initialAmount,
+        isGuest: ref.read(authProvider).isVisitor,
       ),
     );
     if (mounted) _loadDetail();
@@ -909,11 +921,13 @@ class DonationResultSheet extends StatelessWidget {
 class DonationBottomSheet extends ConsumerStatefulWidget {
   final Campaign campaign;
   final double? initialAmount;
+  final bool isGuest;
 
   const DonationBottomSheet({
     super.key,
     required this.campaign,
     this.initialAmount,
+    this.isGuest = false,
   });
 
   @override
@@ -928,12 +942,14 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
   PaymentMethod? _selectedMethod;
   bool _anonymous = false;
   bool _submitting = false;
-  String? _receiptPath;
+  Uint8List? _receiptBytes;
+  String? _receiptFileName;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+    _anonymous = widget.isGuest;
     final methods = widget.campaign.paymentMethods;
     PaymentMethod? firstManual;
     for (final method in methods) {
@@ -957,6 +973,14 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
   }
 
   Future<void> _submit() async {
+    if (!widget.campaign.canDonate) {
+      setState(() {
+        _errorMessage = widget.campaign.isGoalReached
+            ? 'لا يمكن التبرع لهذه الحملة لأنها حققت هدفها'
+            : 'هذه الحملة غير متاحة للتبرع حالياً';
+      });
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
 
     final method = _selectedMethod;
@@ -965,7 +989,7 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
       return;
     }
 
-    if (method.type == 'manual' && method.requiresReceipt && _receiptPath == null) {
+    if (method.type == 'manual' && method.requiresReceipt && _receiptBytes == null) {
       setState(() => _errorMessage = 'يرجى إرفاق إشعار الدفع لإتمام التبرع');
       return;
     }
@@ -985,9 +1009,10 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
           referenceNumber = txNumber;
         }
         if (method.requiresReceipt) {
-          receiptImage = await ref
-              .read(donationServiceProvider)
-              .uploadReceipt(filePath: _receiptPath!);
+          receiptImage = await ref.read(donationServiceProvider).uploadReceipt(
+                bytes: _receiptBytes!,
+                filename: _receiptFileName ?? 'receipt.jpg',
+              );
         }
         await ref.read(donationServiceProvider).createManualDonation(
               campaignId: widget.campaign.id,
@@ -1028,11 +1053,15 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
 
   Future<void> _handleStripePayment(double amount) async {
     final apiClient = ref.read(apiClientProvider);
-    final response = await apiClient.post('/payments/stripe/create-intent', data: {
-      'campaign_id': widget.campaign.id,
-      'amount': amount,
-      'is_anonymous': _anonymous,
-    });
+    final response = await apiClient.post(
+      '/payments/stripe/create-intent',
+      allowGuest: true,
+      data: {
+        'campaign_id': widget.campaign.id,
+        'amount': amount,
+        'is_anonymous': _anonymous,
+      },
+    );
     final clientSecret = response.data['data']['clientSecret'] as String;
 
     await Stripe.instance.initPaymentSheet(
@@ -1079,17 +1108,21 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
               child: child,
             ),
           ),
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 16, right: 16, top: 24,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.88,
             ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: 16, right: 16, top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   Center(
                     child: Container(
                       width: 40, height: 4,
@@ -1178,6 +1211,7 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
                   ),
                 ],
               ),
+            ),
             ),
           ),
         ),
@@ -1274,7 +1308,8 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
   }
 
   Widget _buildReceiptPicker() {
-    final path = _receiptPath;
+    final bytes = _receiptBytes;
+    final hasReceipt = bytes != null && bytes.isNotEmpty;
     return GestureDetector(
       onTap: _pickReceipt,
       child: Container(
@@ -1283,11 +1318,11 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: path == null ? AppColors.primary : AppColors.success,
-            width: path == null ? 1.5 : 1,
+            color: !hasReceipt ? AppColors.primary : AppColors.success,
+            width: !hasReceipt ? 1.5 : 1,
           ),
         ),
-        child: path == null
+        child: !hasReceipt
             ? Row(
                 children: [
                   const Icon(Icons.receipt_long_outlined, size: 22, color: AppColors.primary),
@@ -1309,11 +1344,18 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      File(path),
+                    child: Image.memory(
+                      bytes,
                       width: 52,
                       height: 52,
                       fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Container(
+                        width: 52,
+                        height: 52,
+                        color: AppColors.border.withValues(alpha: 0.3),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.broken_image_outlined, color: AppColors.textHint, size: 22),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1328,7 +1370,10 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
                     ),
                   ),
                   InkWell(
-                    onTap: () => setState(() => _receiptPath = null),
+                    onTap: () => setState(() {
+                      _receiptBytes = null;
+                      _receiptFileName = null;
+                    }),
                     child: const Padding(
                       padding: EdgeInsets.all(6),
                       child: Icon(Icons.close, size: 18, color: AppColors.textHint),
@@ -1341,16 +1386,32 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
   }
 
   Future<void> _pickReceipt() async {
-    final file = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-      imageQuality: 85,
-    );
-    if (file == null || !mounted) return;
-    setState(() => _receiptPath = file.path);
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+      if (file == null || !mounted) return;
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      if (bytes.isEmpty) {
+        setState(() => _errorMessage = 'تعذر قراءة ملف الصورة المختارة');
+        return;
+      }
+      setState(() {
+        _receiptBytes = bytes;
+        _receiptFileName = file.name.isNotEmpty ? file.name : 'receipt.jpg';
+        _errorMessage = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _errorMessage = 'تعذر اختيار صورة إشعار الدفع');
+    }
   }
 
   Widget _buildAnonymousToggle() {
+    final isGuest = widget.isGuest;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
@@ -1362,12 +1423,20 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
         children: [
           const Icon(Icons.visibility_off_outlined, size: 20, color: AppColors.primary),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('إخفاء اسمي', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                Text('سيظهر اسمك في سجل المساهمات باسم فاعل خير', style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: AppColors.textSecondary)),
+                Text(
+                  isGuest ? 'التبرع كفاعل خير' : 'إخفاء اسمي',
+                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                ),
+                Text(
+                  isGuest
+                      ? 'بصفتك زائراً، سيتم تسجيل تبرعك باسم فاعل خير'
+                      : 'سيظهر اسمك في سجل المساهمات باسم فاعل خير',
+                  style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 11, color: AppColors.textSecondary),
+                ),
               ],
             ),
           ),
@@ -1375,7 +1444,7 @@ class _DonationBottomSheetState extends ConsumerState<DonationBottomSheet> {
             value: _anonymous,
             activeThumbColor: AppColors.primary,
             activeTrackColor: AppColors.primary.withValues(alpha: 0.35),
-            onChanged: (value) => setState(() => _anonymous = value),
+            onChanged: isGuest ? null : (value) => setState(() => _anonymous = value),
           ),
         ],
       ),

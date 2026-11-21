@@ -103,6 +103,8 @@
 
   double get progress => targetAmount > 0 ? (collectedAmount / targetAmount).clamp(0, 1) : 0;
   bool get isActive => status == 'active';
+  bool get isGoalReached => targetAmount > 0 && collectedAmount >= targetAmount;
+  bool get canDonate => isActive && !isGoalReached;
 }
 
 class RecentDonation {

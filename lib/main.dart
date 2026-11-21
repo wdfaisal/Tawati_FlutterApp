@@ -169,18 +169,36 @@ class _TawatiAppState extends ConsumerState<TawatiApp> {
       darkTheme: darkTheme,
       themeMode: themeMode,
       builder: (context, child) {
-        if (_splashDone) return child ?? const SizedBox.shrink();
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            child ?? const SizedBox.shrink(),
-            AnimatedLaunchScreen(
-              ready: _initialLoadDone,
-              onFinished: () {
-                if (mounted) setState(() => _splashDone = true);
-              },
-            ),
-          ],
+        final isDark = themeMode == ThemeMode.dark ||
+            (themeMode == ThemeMode.system &&
+                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+        final overlay = SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+          systemStatusBarContrastEnforced: false,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarIconBrightness:
+              isDark ? Brightness.light : Brightness.dark,
+          systemNavigationBarContrastEnforced: false,
+        );
+        final content = _splashDone
+            ? (child ?? const SizedBox.shrink())
+            : Stack(
+                fit: StackFit.expand,
+                children: [
+                  child ?? const SizedBox.shrink(),
+                  AnimatedLaunchScreen(
+                    ready: _initialLoadDone,
+                    onFinished: () {
+                      if (mounted) setState(() => _splashDone = true);
+                    },
+                  ),
+                ],
+              );
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: overlay,
+          child: content,
         );
       },
     );

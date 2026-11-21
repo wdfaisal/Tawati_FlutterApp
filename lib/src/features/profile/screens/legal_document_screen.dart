@@ -5,15 +5,27 @@ import 'package:tawati_mobile/src/core/legal.dart';
 
 enum LegalDocumentType { privacy, terms }
 
+const _kPrimary = Color(0xFF044465);
+const _kMuted = Color(0xFF9CAFB8);
+const _kSecondary = Color(0xFF62707B);
+const _kSurface = Color(0xFFF1F5F8);
+const _kDark = Color(0xFF1A242B);
+const _kBorder = Color(0xFFE5EBF0);
+
 class LegalDocumentScreen extends StatelessWidget {
   final LegalDocumentType type;
 
   const LegalDocumentScreen({super.key, required this.type});
 
   bool get _isPrivacy => type == LegalDocumentType.privacy;
-
   String get _title => _isPrivacy ? 'سياسة الخصوصية' : 'الشروط والأحكام';
-  String get _url => _isPrivacy ? LegalLinks.privacyPolicyUrl : LegalLinks.termsUrl;
+  String get _subtitle => _isPrivacy
+      ? 'كيف نتعامل مع بياناتك ونحمي خصوصيتك'
+      : 'القواعد والشروط المنظمة لاستخدام التطبيق';
+  String get _url =>
+      _isPrivacy ? LegalLinks.privacyPolicyUrl : LegalLinks.termsUrl;
+  IconData get _headerIcon =>
+      _isPrivacy ? Icons.privacy_tip_outlined : Icons.gavel_outlined;
 
   @override
   Widget build(BuildContext context) {
@@ -21,50 +33,138 @@ class LegalDocumentScreen extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF0D9488),
-          foregroundColor: Colors.white,
-          title: Text(
-            _title,
-            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontWeight: FontWeight.w600),
-          ),
-          centerTitle: true,
-        ),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _InfoBanner(
-              text: _isPrivacy
-                  ? 'توضح هذه الصفحة ملخصًا لكيفية تعامل تطبيق تواتي مع بياناتك. للاطلاع على النسخة المنشورة والمعتمدة، استخدم الرابط أدناه.'
-                  : 'توضح هذه الصفحة ملخصًا لشروط استخدام تطبيق تواتي. للاطلاع على النسخة المنشورة والمعتمدة، استخدم الرابط أدناه.',
-            ),
-            const SizedBox(height: 12),
-            for (final section in sections) ...[
-              _SectionCard(title: section.title, body: section.body),
-              const SizedBox(height: 12),
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: _buildHeader(context),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                  children: [
+                    _HeroCard(
+                      icon: _headerIcon,
+                      title: _title,
+                      text: _isPrivacy
+                          ? 'توضح هذه الصفحة ملخصًا لكيفية تعامل تطبيق تواتي مع بياناتك. للاطلاع على النسخة المنشورة والمعتمدة، استخدم الرابط أدناه.'
+                          : 'توضح هذه الصفحة ملخصًا لشروط استخدام تطبيق تواتي. للاطلاع على النسخة المنشورة والمعتمدة، استخدم الرابط أدناه.',
+                    ),
+                    const SizedBox(height: 20),
+                    for (var i = 0; i < sections.length; i++) ...[
+                      _SectionCard(
+                        index: i + 1,
+                        title: sections[i].title,
+                        body: sections[i].body,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    const SizedBox(height: 8),
+                    _ActionCard(
+                      icon: Icons.open_in_new_rounded,
+                      title: 'فتح النسخة الكاملة على الويب',
+                      subtitle: _url,
+                      onTap: () => _openUrl(context, _url),
+                    ),
+                    const SizedBox(height: 10),
+                    _ActionCard(
+                      icon: Icons.mail_outline_rounded,
+                      title: 'التواصل بخصوص الخصوصية/الشروط',
+                      subtitle: LegalLinks.supportEmail,
+                      onTap: () => _openMail(
+                        context,
+                        LegalLinks.supportEmail,
+                        LegalLinks.supportSubject,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: _kSurface,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline_rounded,
+                              size: 18, color: _kSecondary),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'ملاحظة: يجب تحديث الروابط والنصوص المعتمدة نهائيًا قبل النشر الإنتاجي بما يتوافق مع سياسات المتاجر والأنظمة المعمول بها.',
+                              style: TextStyle(
+                                fontFamily: 'IBMPlexSansArabic',
+                                fontSize: 12,
+                                color: _kSecondary,
+                                height: 1.7,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
-            _ActionCard(
-              icon: Icons.open_in_new_rounded,
-              title: 'فتح النسخة الكاملة على الويب',
-              subtitle: _url,
-              onTap: () => _openUrl(context, _url),
-            ),
-            const SizedBox(height: 10),
-            _ActionCard(
-              icon: Icons.email_outlined,
-              title: 'التواصل بخصوص الخصوصية/الشروط',
-              subtitle: LegalLinks.supportEmail,
-              onTap: () => _openMail(context, LegalLinks.supportEmail, LegalLinks.supportSubject),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'ملاحظة: يجب تحديث الروابط والنصوص المعتمدة نهائيًا قبل النشر الإنتاجي بما يتوافق مع سياسات المتاجر والأنظمة المعمول بها.',
-              style: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Color(0xFF64748B), height: 1.6),
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            color: _kSurface,
+            shape: BoxShape.circle,
+          ),
+          child: IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Directionality(
+              textDirection: TextDirection.ltr,
+              child: Icon(Icons.arrow_forward_rounded,
+                  color: _kDark, size: 22),
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            visualDensity: VisualDensity.compact,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _title,
+                style: const TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: _kDark,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _subtitle,
+                style: const TextStyle(
+                  fontFamily: 'IBMPlexSansArabic',
+                  fontSize: 12,
+                  color: _kSecondary,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -73,12 +173,16 @@ class LegalDocumentScreen extends StatelessWidget {
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذر فتح الرابط', style: TextStyle(fontFamily: 'IBMPlexSansArabic'))),
+        const SnackBar(
+          content: Text('تعذر فتح الرابط',
+              style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
+        ),
       );
     }
   }
 
-  Future<void> _openMail(BuildContext context, String email, String subject) async {
+  Future<void> _openMail(
+      BuildContext context, String email, String subject) async {
     final uri = Uri(
       scheme: 'mailto',
       path: email,
@@ -87,7 +191,10 @@ class LegalDocumentScreen extends StatelessWidget {
     final ok = await launchUrl(uri);
     if (!ok && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذر فتح تطبيق البريد', style: TextStyle(fontFamily: 'IBMPlexSansArabic'))),
+        const SnackBar(
+          content: Text('تعذر فتح تطبيق البريد',
+              style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
+        ),
       );
     }
   }
@@ -155,28 +262,63 @@ class _DocSection {
   const _DocSection({required this.title, required this.body});
 }
 
-class _InfoBanner extends StatelessWidget {
+class _HeroCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
   final String text;
-  const _InfoBanner({required this.text});
+  const _HeroCard(
+      {required this.icon, required this.title, required this.text});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D9488).withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF0D9488).withValues(alpha: 0.2)),
+        gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [Color(0xFF044465), Color(0xFF033A57)],
+        ),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, color: Color(0xFF0D9488), size: 20),
-          const SizedBox(width: 10),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 14),
           Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: Color(0xFF0F172A), height: 1.6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  text,
+                  style: TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.88),
+                    height: 1.7,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -186,9 +328,11 @@ class _InfoBanner extends StatelessWidget {
 }
 
 class _SectionCard extends StatelessWidget {
+  final int index;
   final String title;
   final String body;
-  const _SectionCard({required this.title, required this.body});
+  const _SectionCard(
+      {required this.index, required this.title, required this.body});
 
   @override
   Widget build(BuildContext context) {
@@ -196,20 +340,55 @@ class _SectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _kPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$index',
+                  style: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: _kPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: 'IBMPlexSansArabic',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: _kDark,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             body,
-            style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 13, color: Color(0xFF334155), height: 1.7),
+            style: const TextStyle(
+              fontFamily: 'IBMPlexSansArabic',
+              fontSize: 13,
+              color: _kSecondary,
+              height: 1.8,
+            ),
           ),
         ],
       ),
@@ -222,37 +401,69 @@ class _ActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  const _ActionCard({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _ActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _kBorder),
           ),
           child: Row(
             children: [
-              Icon(icon, color: const Color(0xFF0D9488)),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: _kSurface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: _kPrimary, size: 20),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _kDark,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(subtitle, style: const TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 12, color: Color(0xFF64748B))),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'IBMPlexSansArabic',
+                        fontSize: 12,
+                        color: _kMuted,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF94A3B8)),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 16, color: _kMuted),
             ],
           ),
         ),

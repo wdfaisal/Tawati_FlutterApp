@@ -134,8 +134,8 @@ class ApiClient {
   Future<Response> get(String path, {Map<String, dynamic>? params}) =>
       _dio.get(path, queryParameters: params);
 
-  Future<Response> post(String path, {dynamic data}) {
-    _ensureNotGuest();
+  Future<Response> post(String path, {dynamic data, bool allowGuest = false}) {
+    if (!allowGuest) _ensureNotGuest();
     return _dio.post(path, data: data);
   }
 
@@ -158,8 +158,9 @@ class ApiClient {
     String? filePath,
     List<int>? bytes,
     String? filename,
+    bool allowGuest = false,
   }) async {
-    _ensureNotGuest();
+    if (!allowGuest) _ensureNotGuest();
     final MultipartFile file;
     if (filePath != null && filePath.isNotEmpty) {
       file = await MultipartFile.fromFile(filePath, filename: filename);
